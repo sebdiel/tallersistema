@@ -5,6 +5,8 @@ export enum TipoAlerta {
   STOCK_BAJO = 'STOCK_BAJO',
   /** RN-13: vehículo listo, hay que avisar al cliente. */
   ORDEN_TERMINADA = 'ORDEN_TERMINADA',
+  /** HU-27: suscripción por vencer o en período de gracia. */
+  SUSCRIPCION = 'SUSCRIPCION',
 }
 
 /** Alertas generadas automáticamente por el motor de reglas. */

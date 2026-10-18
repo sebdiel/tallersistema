@@ -17,7 +17,10 @@ interface ItemMenu {
 }
 
 const MENU: ItemMenu[] = [
-  { ruta: '/', texto: 'Inicio', icono: '🏠', roles: ['ADMIN', 'MECANICO', 'SUPERADMIN'], principal: true },
+  // SUPERADMIN (Iteración 4): administración global del sistema comercial.
+  { ruta: '/admin', texto: 'Panel', icono: '📈', roles: ['SUPERADMIN'], principal: true },
+  { ruta: '/admin/talleres', texto: 'Talleres', icono: '🏪', roles: ['SUPERADMIN'], principal: true },
+  { ruta: '/', texto: 'Inicio', icono: '🏠', roles: ['ADMIN', 'MECANICO'], principal: true },
   { ruta: '/ordenes', texto: 'Órdenes', icono: '📋', roles: ['ADMIN', 'MECANICO'], principal: true },
   { ruta: '/vehiculos', texto: 'Vehículos', icono: '🚗', roles: ['ADMIN', 'MECANICO'], principal: true },
   { ruta: '/inventario', texto: 'Inventario', icono: '📦', roles: ['ADMIN', 'MECANICO'], principal: true },
@@ -55,7 +58,11 @@ export class ShellComponent {
 
   constructor() {
     // El SUPERADMIN no opera un taller: no necesita datos offline.
-    if (!this.auth.tieneRol('SUPERADMIN')) this.sync.iniciar();
+    if (!this.auth.tieneRol('SUPERADMIN')) {
+      this.sync.iniciar();
+      // Estado de la suscripción al día (aviso de vencimiento).
+      this.auth.refrescarPerfil();
+    }
 
     inject(Router)
       .events.pipe(

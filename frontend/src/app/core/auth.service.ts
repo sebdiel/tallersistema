@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { firstValueFrom, Observable, tap } from 'rxjs';
 import { API_URL } from './config';
-import { LoginResponse, Rol, UsuarioSesion } from './models';
+import { InfoSuscripcion, LoginResponse, Rol, UsuarioSesion } from './models';
 
 const TOKEN_KEY = 'taller.token';
 const USER_KEY = 'taller.usuario';
@@ -17,6 +17,12 @@ export class AuthService {
   private readonly _usuario = signal<UsuarioSesion | null>(leerUsuario());
   readonly usuario = this._usuario.asReadonly();
   readonly autenticado = computed(() => !!this._usuario() && !!this.token);
+
+  /** Estado de la suscripción del taller (Iteración 4). */
+  readonly suscripcion = computed(() => this._usuario()?.taller?.suscripcion ?? null);
+
+  /** Por qué se cerró la sesión (p. ej. taller suspendido); se muestra en el login. */
+  readonly motivoSalida = signal<string | null>(null);
 
   get token(): string | null {
     return localStorage.getItem(TOKEN_KEY);
@@ -33,17 +39,39 @@ export class AuthService {
       .pipe(
         tap((res) => {
           localStorage.setItem(TOKEN_KEY, res.accessToken);
-          localStorage.setItem(USER_KEY, JSON.stringify(res.usuario));
-          this._usuario.set(res.usuario);
+          this.guardarUsuario(res.usuario);
+          this.motivoSalida.set(null);
         }),
       );
   }
 
-  logout(): void {
+  /** Actualiza el estado de la suscripción (aviso de vencimiento) sin volver a iniciar sesión. */
+  async refrescarPerfil() {
+    const u = this._usuario();
+    if (!u?.taller) return;
+    try {
+      const perfil = await firstValueFrom(
+        this.http.get<{ taller: { suscripcion: InfoSuscripcion } | null }>(`${API_URL}/auth/me`),
+      );
+      if (perfil.taller) {
+        this.guardarUsuario({ ...u, taller: { ...u.taller, suscripcion: perfil.taller.suscripcion } });
+      }
+    } catch {
+      // Sin conexión: se conserva el último estado conocido.
+    }
+  }
+
+  logout(motivo?: string): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this._usuario.set(null);
+    this.motivoSalida.set(motivo ?? null);
     this.router.navigate(['/login']);
+  }
+
+  private guardarUsuario(u: UsuarioSesion) {
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+    this._usuario.set(u);
   }
 }
 

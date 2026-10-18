@@ -20,3 +20,9 @@ export const rolGuard =
     const auth = inject(AuthService);
     return auth.tieneRol(...roles) || inject(Router).createUrlTree(['/']);
   };
+
+/** El SUPERADMIN no opera un taller: su inicio es el panel global (Iteración 4). */
+export const inicioPorRolGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  return auth.tieneRol('SUPERADMIN') ? inject(Router).createUrlTree(['/admin']) : true;
+};

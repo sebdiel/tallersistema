@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { estadoSuscripcion } from '../admin/suscripcion';
 import { UsuarioActual } from '../common/decorators/auth.decorators';
 import { tallerDe } from '../common/utils/taller.util';
 import { CreateUsuarioDto, UpdateUsuarioDto } from './dto/usuario.dto';
@@ -21,8 +22,14 @@ export class UsuariosService {
     @InjectRepository(Usuario) private readonly repo: Repository<Usuario>,
   ) {}
 
-  perfil(id: string) {
-    return this.repo.findOne({ where: { id }, relations: { taller: true } });
+  /** Perfil + estado de la suscripción del taller (para el aviso de vencimiento). */
+  async perfil(id: string) {
+    const u = await this.repo.findOne({ where: { id }, relations: { taller: true } });
+    if (!u) return null;
+    return {
+      ...u,
+      taller: u.taller ? { ...u.taller, suscripcion: estadoSuscripcion(u.taller) } : null,
+    };
   }
 
   listar(user: UsuarioActual) {

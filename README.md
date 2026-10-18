@@ -24,6 +24,8 @@ tallersistema/
 │       ├── sync/       sincronización offline idempotente (HU-16)
 │       ├── servicios/  catálogo de servicios con precio estándar (HU-18)
 │       ├── dashboard/  KPIs calculados en SQL (HU-22 a HU-24)
+│       ├── admin/      SuperAdmin: talleres, suscripciones, tarea diaria (HU-25 a HU-28)
+│       ├── database/migraciones/  esquema versionado para producción (HU-29)
 │       ├── common/     guards de rol (HU-03), decoradores, utilidades
 │       └── database/   datos iniciales (seed)
 ├── frontend/           PWA Angular
@@ -33,8 +35,11 @@ tallersistema/
 │       ├── layout/     barra, menú por rol e indicador de sincronización
 │       └── features/   login, inicio, clientes, vehículos, usuarios,
 │                       ordenes (+ comprobante), inventario, sync,
-│                       dashboard (indicadores), configuracion
-└── docker-compose.yml  PostgreSQL 16
+│                       dashboard (indicadores), configuracion, admin (SuperAdmin)
+├── deploy/             backup.sh (respaldo diario), restaurar.sh
+├── docker-compose.yml       PostgreSQL 16 (desarrollo)
+├── docker-compose.prod.yml  producción: Caddy HTTPS + API + PostgreSQL + backups
+└── DEPLOY.md                guía de despliegue en el VPS
 ```
 
 ## Cómo ejecutar (desarrollo)
@@ -193,3 +198,42 @@ Cada indicador se compara con el período anterior de igual duración (▲/▼ e
 - **Unitarias** (`npm test` en backend): 15 pruebas (costos, máquina de estados con RN-18/RN-19, placas).
 - **API de punta a punta**: 34 comprobaciones de catálogo, costos, descuentos, pagos, crédito, anulación, sincronización de cobros offline y dashboard.
 - **Navegador real con la PWA de producción**: cargar mano de obra desde el catálogo, descuento, pago por QR, **cobro sin conexión** que se sincroniza solo, entrega, comprobante, dashboard y configuración (16 comprobaciones). También se repitió la prueba offline de la Iteración 2, sin regresiones.
+
+## Iteración 4: Administración global (SuperAdmin) y despliegue (OE4)
+
+| HU | Historia | Estado |
+|---|---|---|
+| HU-25 | El SUPERADMIN registra talleres con su administrador y días de prueba | ✅ |
+| HU-26 | Gestionar suscripciones: registrar pagos, suspender y reactivar, restablecer contraseñas | ✅ |
+| HU-27 | Bloqueo automático por vencimiento, con período de gracia y avisos programados | ✅ |
+| HU-28 | Panel global: talleres por estado, ingreso recurrente, cobros por mes, cobranza pendiente y uso por taller | ✅ |
+| HU-29 | Despliegue en VPS con HTTPS, migraciones y backups automáticos | ✅ Listo y probado localmente (ver [DEPLOY.md](DEPLOY.md)) |
+
+### Ciclo de la suscripción
+
+```
+ACTIVA ──(faltan ≤ 7 días)──► POR_VENCER ──(vence)──► EN_GRACIA ──(5 días)──► VENCIDA
+   ▲                                                                       │
+   └──────────────────────── registrar pago ◄──────────────────────────────┘
+          (SUSPENDIDA: bloqueo manual del SUPERADMIN, en cualquier momento)
+```
+
+### Reglas de negocio de la iteración
+
+| Código | Regla | Dónde |
+|---|---|---|
+| RN-21 | Durante 5 días de gracia tras vencer, el taller sigue trabajando con un aviso visible | `admin/suscripcion.ts` |
+| RN-22 | Vencida o suspendida: se bloquea el login **y se cortan las sesiones abiertas**, explicando el motivo | `auth.service.ts`, `jwt.strategy.ts` |
+| RN-23 | Un pago extiende desde el vencimiento si aún no venció (no se pierden días) o desde hoy si ya venció | `admin/suscripcion.ts → nuevaVigencia` |
+| RN-24 | Todos los días a las 07:00 (hora de Bolivia) se avisa a los talleres por vencer o en gracia; el aviso se cierra solo al pagar | `admin/suscripciones.tareas.ts` (@Cron) |
+| RN-25 | El SUPERADMIN solo ve cifras de uso de cada taller, nunca sus clientes ni sus órdenes | `admin.service.ts` |
+
+### Pruebas realizadas
+
+- **Unitarias** (`npm test` en backend): 24 pruebas. Incluyen los 5 estados de la suscripción, la renovación sin perder días, la suma de meses con fin de mes y la fecha en hora de Bolivia.
+- **Migraciones**: la migración `EsquemaInicial` se aplicó sobre una base vacía y se comparó otra vez contra las entidades: "No changes in database schema".
+- **Stack de producción completo en Docker** (Caddy HTTPS + API + PostgreSQL + backup), con 16 comprobaciones de API a través de HTTPS:
+  - HTTPS, redirección HTTP→HTTPS, PWA, rutas de la SPA, cabeceras de seguridad y base de datos sin puerto público.
+  - Alta de taller, aislamiento entre talleres, pagos, suspensión con corte de sesión, restablecer contraseña, panel global y límite de 5 logins por minuto.
+  - Backup automático creado.
+- **Navegador real contra ese stack**: el SUPERADMIN crea un taller y cobra; el taller entra en gracia y ve el aviso; al vencer se le cierra la sesión con el motivo; renueva y recupera el acceso.

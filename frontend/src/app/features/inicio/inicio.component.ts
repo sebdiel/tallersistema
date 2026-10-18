@@ -43,9 +43,13 @@ import { Alerta } from '../../core/models';
             <ul class="lista">
               @for (a of alertas(); track a.id) {
                 <li class="item" style="box-shadow: none; border: 1px solid var(--borde)">
-                  <a [routerLink]="a.tipo === 'STOCK_BAJO' ? ['/inventario', a.referenciaId] : ['/ordenes', a.referenciaId]">
-                    {{ a.tipo === 'STOCK_BAJO' ? '📦' : '✅' }} {{ a.mensaje }}
-                  </a>
+                  @if (a.tipo === 'SUSCRIPCION') {
+                    <span>💳 {{ a.mensaje }}</span>
+                  } @else {
+                    <a [routerLink]="a.tipo === 'STOCK_BAJO' ? ['/inventario', a.referenciaId] : ['/ordenes', a.referenciaId]">
+                      {{ a.tipo === 'STOCK_BAJO' ? '📦' : '✅' }} {{ a.mensaje }}
+                    </a>
+                  }
                   @if (a.tipo === 'ORDEN_TERMINADA') {
                     <button class="btn btn-sec" style="min-height: 34px" (click)="resolver(a)">Ya avisé</button>
                   }

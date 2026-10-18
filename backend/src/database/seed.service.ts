@@ -25,16 +25,8 @@ export class SeedService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     if ((await this.usuarios.count()) > 0) return;
 
-    const taller = await this.talleres.save(
-      this.talleres.create({
-        nombre: this.config.get('SEED_TALLER_NOMBRE', 'Taller Demo'),
-      }),
-    );
-
     const superEmail = this.config.get('SEED_SUPERADMIN_EMAIL', 'superadmin@taller.bo');
-    const adminEmail = this.config.get('SEED_ADMIN_EMAIL', 'admin@taller.bo');
-
-    await this.usuarios.save([
+    await this.usuarios.save(
       this.usuarios.create({
         nombre: 'Super Administrador',
         email: superEmail,
@@ -45,6 +37,21 @@ export class SeedService implements OnApplicationBootstrap {
           10,
         ),
       }),
+    );
+
+    // En producción (SEED_DEMO=false) los talleres los crea el SUPERADMIN.
+    if (this.config.get('SEED_DEMO', 'true') !== 'true') {
+      this.logger.log(`SUPERADMIN inicial creado: ${superEmail}`);
+      return;
+    }
+
+    const taller = await this.talleres.save(
+      this.talleres.create({
+        nombre: this.config.get('SEED_TALLER_NOMBRE', 'Taller Demo'),
+      }),
+    );
+    const adminEmail = this.config.get('SEED_ADMIN_EMAIL', 'admin@taller.bo');
+    await this.usuarios.save(
       this.usuarios.create({
         nombre: 'Administrador del Taller',
         email: adminEmail,
@@ -55,7 +62,7 @@ export class SeedService implements OnApplicationBootstrap {
           10,
         ),
       }),
-    ]);
+    );
 
     this.logger.log(`Datos iniciales creados: ${superEmail}, ${adminEmail}`);
   }

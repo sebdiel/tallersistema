@@ -9,15 +9,17 @@
     </div>
 
     <div class="derecha">
-      <a class="estado" routerLink="/sincronizacion" [class.offline]="!conexion.enLinea()" title="Sincronización">
-        {{ conexion.enLinea() ? (sync.sincronizando() ? '⟳ Sincronizando' : 'En línea') : 'Sin conexión' }}
-        @if (sync.pendientes()) {
-          · {{ sync.pendientes() }} pendiente(s)
-        }
-        @if (sync.conflictos()) {
-          · ⚠ {{ sync.conflictos() }}
-        }
-      </a>
+      @if (u.rol !== 'SUPERADMIN') {
+        <a class="estado" routerLink="/sincronizacion" [class.offline]="!conexion.enLinea()" title="Sincronización">
+          {{ conexion.enLinea() ? (sync.sincronizando() ? '⟳ Sincronizando' : 'En línea') : 'Sin conexión' }}
+          @if (sync.pendientes()) {
+            · {{ sync.pendientes() }} pendiente(s)
+          }
+          @if (sync.conflictos()) {
+            · ⚠ {{ sync.conflictos() }}
+          }
+        </a>
+      }
       <div class="usuario">
         <div class="u-nombre">{{ u.nombre }}</div>
         <div class="u-rol">{{ rolLabel[u.rol] }}</div>
@@ -26,13 +28,20 @@
     </div>
   </header>
 
+  <!-- HU-27: aviso de vencimiento de la suscripción -->
+  @if (auth.suscripcion()?.mensaje) {
+    <div class="aviso-suscripcion" [class.grave]="auth.suscripcion()?.estado === 'EN_GRACIA'" role="status">
+      💳 {{ auth.suscripcion()?.mensaje }}
+    </div>
+  }
+
   <div class="cuerpo">
     <nav class="menu">
       @for (item of menu(); track item.ruta) {
         <a
           [routerLink]="item.ruta"
           routerLinkActive="activo"
-          [routerLinkActiveOptions]="{ exact: item.ruta === '/' }"
+          [routerLinkActiveOptions]="{ exact: item.ruta === '/' || item.ruta === '/admin' }"
           [class.secundario]="!item.principal"
         >
           <span class="icono">{{ item.icono }}</span>

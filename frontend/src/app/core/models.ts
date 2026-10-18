@@ -11,7 +11,80 @@ export interface UsuarioSesion {
   nombre: string;
   email: string;
   rol: Rol;
-  taller: { id: string; nombre: string } | null;
+  taller: { id: string; nombre: string; suscripcion?: InfoSuscripcion | null } | null;
+}
+
+// ---------------------------------------------------------------- Iteración 4
+
+export type EstadoSuscripcion = 'ACTIVA' | 'POR_VENCER' | 'EN_GRACIA' | 'VENCIDA' | 'SUSPENDIDA';
+
+export interface InfoSuscripcion {
+  estado: EstadoSuscripcion;
+  vigenteHasta: string;
+  diasRestantes: number;
+  habilitado: boolean;
+  mensaje: string | null;
+}
+
+export const ESTADO_SUSCRIPCION: Record<EstadoSuscripcion, { texto: string; clase: string }> = {
+  ACTIVA: { texto: 'Activa', clase: 'est-terminado' },
+  POR_VENCER: { texto: 'Por vencer', clase: 'est-diagnostico' },
+  EN_GRACIA: { texto: 'En gracia', clase: 'est-reparacion' },
+  VENCIDA: { texto: 'Vencida', clase: 'est-cancelado' },
+  SUSPENDIDA: { texto: 'Suspendida', clase: 'est-entregado' },
+};
+
+export interface TallerResumen {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  contactoNombre: string | null;
+  adminEmail: string | null;
+  usuarios: number;
+  ot30d: number;
+  ultimaActividad: string | null;
+  createdAt: string;
+  suscripcion: InfoSuscripcion;
+}
+
+export interface ResumenGlobal {
+  talleres: number;
+  habilitados: number;
+  porEstado: Record<EstadoSuscripcion, number>;
+  precioMensual: number;
+  ingresoRecurrente: number;
+  ingresos: { mes: number; mesAnterior: number; total: number; porMes: { mes: string; monto: number; pagos: number }[] };
+  atencion: TallerResumen[];
+}
+
+export interface DetalleTaller {
+  taller: {
+    id: string;
+    nombre: string;
+    direccion: string | null;
+    telefono: string | null;
+    nit: string | null;
+    contactoNombre: string | null;
+    notas: string | null;
+    activo: boolean;
+    motivoSuspension: string | null;
+    vigenteHasta: string;
+    createdAt: string;
+  };
+  suscripcion: InfoSuscripcion;
+  usuarios: { id: string; nombre: string; email: string; rol: Rol; activo: boolean }[];
+  pagos: {
+    id: string;
+    monto: number;
+    meses: number;
+    desde: string;
+    hasta: string;
+    metodo: string;
+    referencia: string | null;
+    registradoPor: string | null;
+    createdAt: string;
+  }[];
+  uso: { otTotal: number; ot30d: number; clientes: number; vehiculos: number; ultimaActividad: string | null };
 }
 
 export interface LoginResponse {
@@ -154,7 +227,7 @@ export interface OrdenTrabajo {
 
 export interface Alerta {
   id: string;
-  tipo: 'STOCK_BAJO' | 'ORDEN_TERMINADA';
+  tipo: 'STOCK_BAJO' | 'ORDEN_TERMINADA' | 'SUSCRIPCION';
   mensaje: string;
   referenciaId: string;
   createdAt: string;

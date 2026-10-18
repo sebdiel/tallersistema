@@ -20,6 +20,8 @@ import { AuthService } from '../../core/auth.service';
 
         @if (error()) {
           <div class="alerta alerta-error">{{ error() }}</div>
+        } @else if (auth.motivoSalida()) {
+          <div class="alerta alerta-warn">{{ auth.motivoSalida() }}</div>
         }
 
         <div class="campo">
@@ -73,7 +75,7 @@ import { AuthService } from '../../core/auth.service';
   `,
 })
 export class LoginComponent {
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
   readonly cargando = signal(false);

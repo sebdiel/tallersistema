@@ -5,6 +5,9 @@ import {
   Alerta,
   Cliente,
   Dashboard,
+  DetalleTaller,
+  ResumenGlobal,
+  TallerResumen,
   Servicio,
   Taller,
   EstadoOrden,
@@ -197,5 +200,42 @@ export class DashboardApi {
 
   kpis(desde: string, hasta: string) {
     return this.http.get<Dashboard>(`${API_URL}/dashboard`, { params: { desde, hasta } });
+  }
+}
+
+// ---------------------------------------------------------------- Iteración 4
+
+/** Administración global (solo SUPERADMIN). */
+@Injectable({ providedIn: 'root' })
+export class AdminApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/admin`;
+
+  resumen() {
+    return this.http.get<ResumenGlobal>(`${this.url}/resumen`);
+  }
+  talleres() {
+    return this.http.get<TallerResumen[]>(`${this.url}/talleres`);
+  }
+  detalle(id: string) {
+    return this.http.get<DetalleTaller>(`${this.url}/talleres/${id}`);
+  }
+  crear(data: unknown) {
+    return this.http.post<DetalleTaller>(`${this.url}/talleres`, data);
+  }
+  actualizar(id: string, data: unknown) {
+    return this.http.patch<DetalleTaller>(`${this.url}/talleres/${id}`, data);
+  }
+  registrarPago(id: string, data: { meses: number; monto: number; metodo: string; referencia?: string | null }) {
+    return this.http.post<DetalleTaller>(`${this.url}/talleres/${id}/pagos`, data);
+  }
+  suspender(id: string, motivo: string) {
+    return this.http.post<DetalleTaller>(`${this.url}/talleres/${id}/suspender`, { motivo });
+  }
+  reactivar(id: string) {
+    return this.http.post<DetalleTaller>(`${this.url}/talleres/${id}/reactivar`, {});
+  }
+  resetPassword(id: string, usuarioId: string, password: string) {
+    return this.http.post<{ ok: boolean }>(`${this.url}/talleres/${id}/usuarios/${usuarioId}/password`, { password });
   }
 }

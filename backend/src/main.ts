@@ -1,9 +1,15 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // En producción la API está detrás de Caddy: tomar la IP real del cliente
+  // (la usa el límite de intentos de login).
+  app.set('trust proxy', 1);
+  app.enableShutdownHooks();
 
   app.setGlobalPrefix('api');
   app.enableCors({

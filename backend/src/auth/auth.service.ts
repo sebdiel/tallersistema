@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { estadoSuscripcion } from '../admin/suscripcion';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -32,8 +33,10 @@ export class AuthService {
     if (!usuario.activo) {
       throw new UnauthorizedException('Usuario desactivado. Contacte al administrador');
     }
-    if (usuario.taller && !usuario.taller.activo) {
-      throw new UnauthorizedException('El taller se encuentra inactivo');
+    // RN-22: taller suspendido o con la suscripción vencida (pasada la gracia).
+    const suscripcion = usuario.taller ? estadoSuscripcion(usuario.taller) : null;
+    if (suscripcion && !suscripcion.habilitado) {
+      throw new ForbiddenException(suscripcion.mensaje);
     }
 
     const payload: UsuarioActual = {
@@ -51,7 +54,7 @@ export class AuthService {
         email: usuario.email,
         rol: usuario.rol,
         taller: usuario.taller
-          ? { id: usuario.taller.id, nombre: usuario.taller.nombre }
+          ? { id: usuario.taller.id, nombre: usuario.taller.nombre, suscripcion }
           : null,
       },
     };

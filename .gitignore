@@ -5,3 +5,7 @@ coverage/
 .env
 *.log
 .DS_Store
+
+# Producción (Iteración 4)
+.env.prod
+backups/

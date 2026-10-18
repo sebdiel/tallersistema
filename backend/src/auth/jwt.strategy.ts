@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { estadoSuscripcion } from '../admin/suscripcion';
 import { Repository } from 'typeorm';
 import { UsuarioActual } from '../common/decorators/auth.decorators';
 import { Usuario } from '../usuarios/usuario.entity';
@@ -33,8 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!usuario || !usuario.activo) {
       throw new UnauthorizedException('Sesión no válida');
     }
-    if (usuario.taller && !usuario.taller.activo) {
-      throw new UnauthorizedException('El taller se encuentra inactivo');
+    // RN-22: el bloqueo por suspensión o vencimiento corta también las sesiones abiertas.
+    const suscripcion = usuario.taller ? estadoSuscripcion(usuario.taller) : null;
+    if (suscripcion && !suscripcion.habilitado) {
+      throw new UnauthorizedException(suscripcion.mensaje);
     }
     return {
       id: usuario.id,

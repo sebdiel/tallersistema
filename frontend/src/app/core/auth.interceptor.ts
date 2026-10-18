@@ -15,7 +15,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(request).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 401 && !req.url.endsWith('/auth/login')) {
-        auth.logout();
+        // Si el servidor explica el motivo (taller suspendido, suscripción vencida) se muestra en el login.
+        const msg = err.error?.message;
+        auth.logout(typeof msg === 'string' && msg !== 'Unauthorized' ? msg : 'Su sesión expiró. Vuelva a ingresar.');
       }
       return throwError(() => err);
     }),

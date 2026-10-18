@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, invitadoGuard, rolGuard } from './core/guards';
+import { authGuard, inicioPorRolGuard, invitadoGuard, rolGuard } from './core/guards';
 import { ShellComponent } from './layout/shell.component';
 
 export const routes: Routes = [
@@ -23,8 +23,40 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [inicioPorRolGuard],
         loadComponent: () =>
           import('./features/inicio/inicio.component').then((m) => m.InicioComponent),
+      },
+      // ------------------------------------------------ Iteración 4 (SUPERADMIN)
+      {
+        path: 'admin',
+        canActivate: [rolGuard('SUPERADMIN')],
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/admin/admin-panel.component').then((m) => m.AdminPanelComponent),
+          },
+          {
+            path: 'talleres',
+            loadComponent: () =>
+              import('./features/admin/admin-talleres.component').then((m) => m.AdminTalleresComponent),
+          },
+          {
+            path: 'talleres/nuevo',
+            loadComponent: () =>
+              import('./features/admin/admin-taller-nuevo.component').then(
+                (m) => m.AdminTallerNuevoComponent,
+              ),
+          },
+          {
+            path: 'talleres/:id',
+            loadComponent: () =>
+              import('./features/admin/admin-taller-detalle.component').then(
+                (m) => m.AdminTallerDetalleComponent,
+              ),
+          },
+        ],
       },
       {
         path: 'clientes',
