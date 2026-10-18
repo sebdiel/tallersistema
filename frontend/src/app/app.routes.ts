@@ -75,6 +75,53 @@ export const routes: Routes = [
             (m) => m.VehiculoFormComponent,
           ),
       },
+      // ------------------------------------------------ Iteración 2
+      {
+        path: 'ordenes',
+        loadComponent: () =>
+          import('./features/ordenes/ordenes-lista.component').then((m) => m.OrdenesListaComponent),
+      },
+      {
+        path: 'ordenes/nueva',
+        loadComponent: () =>
+          import('./features/ordenes/orden-nueva.component').then((m) => m.OrdenNuevaComponent),
+      },
+      {
+        path: 'ordenes/:id',
+        loadComponent: () =>
+          import('./features/ordenes/orden-detalle.component').then((m) => m.OrdenDetalleComponent),
+      },
+      {
+        path: 'inventario',
+        loadComponent: () =>
+          import('./features/inventario/inventario-lista.component').then(
+            (m) => m.InventarioListaComponent,
+          ),
+      },
+      {
+        path: 'inventario/nuevo',
+        canActivate: [rolGuard('ADMIN')],
+        loadComponent: () =>
+          import('./features/inventario/repuesto-form.component').then((m) => m.RepuestoFormComponent),
+      },
+      {
+        path: 'inventario/:id',
+        loadComponent: () =>
+          import('./features/inventario/repuesto-detalle.component').then(
+            (m) => m.RepuestoDetalleComponent,
+          ),
+      },
+      {
+        path: 'inventario/:id/editar',
+        canActivate: [rolGuard('ADMIN')],
+        loadComponent: () =>
+          import('./features/inventario/repuesto-form.component').then((m) => m.RepuestoFormComponent),
+      },
+      {
+        path: 'sincronizacion',
+        loadComponent: () =>
+          import('./features/sync/sincronizacion.component').then((m) => m.SincronizacionComponent),
+      },
       {
         path: 'usuarios',
         canActivate: [rolGuard('ADMIN')],

@@ -1,0 +1,232 @@
+<div class="pagina">
+  @if (orden(); as o) {
+    <div class="encabezado">
+      <div>
+        <a routerLink="/ordenes">← Órdenes</a>
+        <div class="cabecera-ot">
+          <h1>{{ numero(o.numero) }}</h1>
+          <span class="placa">{{ o.vehiculo?.placa }}</span>
+          <span [class]="'estado-ot ' + info[o.estado].clase">{{ info[o.estado].texto }}</span>
+          @if (o._pendiente) {
+            <span class="pendiente-sync">⟳ sin sincronizar</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="alerta alerta-error">{{ error() }}</div>
+    }
+    @if (aviso()) {
+      <div class="alerta alerta-warn">{{ aviso() }}</div>
+    }
+
+    <!-- Avance de estado (máquina de estados) -->
+    @if (siguientes().length) {
+      <section class="card">
+        <h2>Siguiente paso</h2>
+        <div class="acciones-estado">
+          @for (destino of siguientes(); track destino) {
+            <button
+              class="btn"
+              [class.btn-sec]="destino === 'CANCELADO' || (o.estado === 'TERMINADO' && destino === 'EN_REPARACION')"
+              [disabled]="procesando()"
+              (click)="cambiarEstado(destino)"
+            >
+              {{ o.estado === 'TERMINADO' && destino === 'EN_REPARACION' ? 'Reabrir reparación' : accionTexto[destino] }}
+            </button>
+          }
+        </div>
+
+        @if (confirmando(); as destino) {
+          <div class="campo" style="margin-top: 12px">
+            <label class="req" for="motivo">
+              {{ destino === 'CANCELADO' ? 'Motivo de la cancelación' : 'Motivo para reabrir' }}
+            </label>
+            <textarea id="motivo" rows="2" [(ngModel)]="comentario"></textarea>
+            @if (destino === 'CANCELADO' && o.repuestos?.length) {
+              <span class="item-sub">Los repuestos registrados volverán al inventario.</span>
+            }
+          </div>
+          <div class="acciones">
+            <button class="btn btn-sec" (click)="confirmando.set(null)">Volver</button>
+            <button class="btn" [class.btn-peligro]="destino === 'CANCELADO'" [disabled]="procesando()" (click)="cambiarEstado(destino)">
+              Confirmar
+            </button>
+          </div>
+        }
+      </section>
+    }
+
+    <div class="grid-2">
+      <!-- Recepción -->
+      <section class="card">
+        <h2>Recepción</h2>
+        <dl class="datos">
+          <dt>Vehículo</dt>
+          <dd>
+            <a [routerLink]="['/vehiculos', o.vehiculoId]">{{ o.vehiculo?.marca }} {{ o.vehiculo?.modelo }}</a>
+          </dd>
+          <dt>Cliente</dt>
+          <dd>
+            {{ o.cliente?.nombre }}
+            @if (o.cliente?.telefono) {
+              · <a [href]="'tel:' + o.cliente?.telefono">{{ o.cliente?.telefono }}</a>
+            }
+          </dd>
+          <dt>Ingreso</dt>
+          <dd>{{ o.fechaIngreso | date: 'dd/MM/yyyy HH:mm' }}</dd>
+          <dt>Kilometraje</dt>
+          <dd>{{ o.kilometrajeIngreso | number }} km</dd>
+          <dt>Problema</dt>
+          <dd>{{ o.problemaReportado }}</dd>
+          @if (o.observacionesRecepcion) {
+            <dt>Observaciones</dt>
+            <dd>{{ o.observacionesRecepcion }}</dd>
+          }
+        </dl>
+      </section>
+
+      <!-- Mecánico + diagnóstico -->
+      <section class="card">
+        <h2>Mecánico</h2>
+        @if (auth.tieneRol('ADMIN') && editable()) {
+          <select class="buscador" [ngModel]="o.mecanicoId ?? ''" (ngModelChange)="asignar($event)" [disabled]="procesando()">
+            <option value="">Sin asignar</option>
+            @for (p of personal(); track p.id) {
+              <option [value]="p.id">{{ p.nombre }}</option>
+            }
+          </select>
+        } @else {
+          <p style="margin: 0">{{ o.mecanico?.nombre ?? 'Sin asignar' }}</p>
+        }
+
+        <h2 style="margin-top: 16px">Diagnóstico</h2>
+        @if (editable()) {
+          <textarea class="buscador" rows="4" [(ngModel)]="diagnostico" placeholder="Qué encontró el mecánico y qué se hará"></textarea>
+          <div class="acciones" style="margin-top: 8px">
+            <button class="btn btn-sec" [disabled]="procesando() || diagnostico === (o.diagnostico ?? '')" (click)="guardarDiagnostico()">
+              Guardar diagnóstico
+            </button>
+          </div>
+        } @else {
+          <p style="margin: 0">{{ o.diagnostico || '—' }}</p>
+        }
+      </section>
+    </div>
+
+    <!-- Repuestos utilizados -->
+    <section class="card">
+      <h2>Repuestos utilizados</h2>
+      @if (o.repuestos?.length) {
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Repuesto</th>
+              <th class="num">Cant.</th>
+              <th class="num">P. unit.</th>
+              <th class="num">Subtotal</th>
+              @if (conRepuestos()) {
+                <th></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of o.repuestos; track l.id) {
+              <tr>
+                <td>
+                  {{ l.repuesto?.nombre }}
+                  <div class="item-sub">{{ l.repuesto?.codigo }}</div>
+                </td>
+                <td class="num">{{ l.cantidad }} {{ l.repuesto?.unidad?.toLowerCase() }}</td>
+                <td class="num">{{ l.precioUnitario | number: '1.2-2' }}</td>
+                <td class="num">{{ l.cantidad * l.precioUnitario | number: '1.2-2' }}</td>
+                @if (conRepuestos()) {
+                  <td class="num">
+                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitar(l)">✕</button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="3">Total repuestos (Bs)</th>
+              <th class="num">{{ totalRepuestos() | number: '1.2-2' }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      } @else {
+        <p class="item-sub">No hay repuestos registrados.</p>
+      }
+
+      @if (conRepuestos()) {
+        <div style="margin-top: 16px">
+          <input
+            class="buscador"
+            placeholder="Buscar repuesto por nombre o código…"
+            [(ngModel)]="filtroRepuesto"
+            (ngModelChange)="filtrarRepuestos()"
+            style="margin-bottom: 8px"
+          />
+          <div class="agregar">
+            <div class="campo">
+              <label for="rep">Repuesto</label>
+              <select id="rep" [(ngModel)]="repuestoId">
+                <option value="">Seleccione…</option>
+                @for (r of repuestos(); track r.id) {
+                  <option [value]="r.id" [disabled]="r.stock <= 0">
+                    {{ r.nombre }} ({{ r.codigo }}) — stock {{ r.stock }}
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label for="cant">Cantidad</label>
+              <input id="cant" type="number" inputmode="decimal" min="0.01" step="0.5" [(ngModel)]="cantidad" />
+            </div>
+            <button class="btn" [disabled]="procesando() || !repuestoId" (click)="agregarRepuesto()">Agregar</button>
+          </div>
+          @if (repuestoElegido(); as r) {
+            <p class="item-sub" [class.stock-bajo]="r.stock <= r.stockMinimo">
+              Disponible: {{ r.stock }} {{ r.unidad.toLowerCase() }} · Precio: Bs {{ r.precioVenta | number: '1.2-2' }}
+            </p>
+          }
+
+          @if (!o.repuestos?.length) {
+            <label style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
+              <input type="checkbox" [checked]="o.sinRepuestos" [disabled]="procesando()" (change)="marcarSinRepuestos($any($event.target).checked)" />
+              Este trabajo no usó repuestos (solo mano de obra)
+            </label>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Historial de estados -->
+    <section class="card">
+      <h2>Historial</h2>
+      @if (o.historial?.length) {
+        <ul class="linea-tiempo">
+          @for (h of o.historial; track $index) {
+            <li>
+              <strong>{{ info[h.estadoNuevo].texto }}</strong>
+              <div class="item-sub">
+                {{ h.fecha | date: 'dd/MM/yyyy HH:mm' }} · {{ h.usuario?.nombre }}
+              </div>
+              @if (h.comentario) {
+                <div class="item-sub">“{{ h.comentario }}”</div>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="item-sub">El historial no está disponible sin conexión.</p>
+      }
+    </section>
+  } @else if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  } @else {
+    <p class="vacio">Cargando…</p>
+  }
+</div>

@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import { Transform, Type } from 'class-transformer';
 import {
   IsIn,
@@ -19,6 +19,11 @@ const trim = ({ value }: { value: unknown }) =>
 export const COMBUSTIBLES = ['GASOLINA', 'DIESEL', 'GNV', 'ELECTRICO', 'HIBRIDO'];
 
 export class CreateVehiculoDto {
+  /** Opcional: lo envía el frontend cuando el vehículo se registró sin conexión. */
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @IsUUID('4', { message: 'Cliente inválido' })
   clienteId: string;
 
@@ -75,4 +80,4 @@ export class CreateVehiculoDto {
   observaciones?: string | null;
 }
 
-export class UpdateVehiculoDto extends PartialType(CreateVehiculoDto) {}
+export class UpdateVehiculoDto extends PartialType(OmitType(CreateVehiculoDto, ['id'] as const)) {}

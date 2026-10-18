@@ -9,14 +9,20 @@
     </div>
 
     <div class="derecha">
-      <span class="estado" [class.offline]="!conexion.enLinea()">
-        {{ conexion.enLinea() ? 'En línea' : 'Sin conexión' }}
-      </span>
+      <a class="estado" routerLink="/sincronizacion" [class.offline]="!conexion.enLinea()" title="Sincronización">
+        {{ conexion.enLinea() ? (sync.sincronizando() ? '⟳ Sincronizando' : 'En línea') : 'Sin conexión' }}
+        @if (sync.pendientes()) {
+          · {{ sync.pendientes() }} pendiente(s)
+        }
+        @if (sync.conflictos()) {
+          · ⚠ {{ sync.conflictos() }}
+        }
+      </a>
       <div class="usuario">
         <div class="u-nombre">{{ u.nombre }}</div>
         <div class="u-rol">{{ rolLabel[u.rol] }}</div>
       </div>
-      <button class="btn btn-sec salir" (click)="auth.logout()" title="Cerrar sesión">Salir</button>
+      <button class="btn btn-sec salir" (click)="salir()" title="Cerrar sesión">Salir</button>
     </div>
   </header>
 

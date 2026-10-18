@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
@@ -8,6 +9,10 @@ import { ClientesModule } from './clientes/clientes.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { SeedService } from './database/seed.service';
+import { OrdenesModule } from './ordenes/ordenes.module';
+import { ReglasModule } from './reglas/reglas.module';
+import { RepuestosModule } from './repuestos/repuestos.module';
+import { SyncModule } from './sync/sync.module';
 import { Taller } from './talleres/taller.entity';
 import { TalleresModule } from './talleres/talleres.module';
 import { Usuario } from './usuarios/usuario.entity';
@@ -31,12 +36,19 @@ import { VehiculosModule } from './vehiculos/vehiculos.module';
         synchronize: config.get('DB_SYNC') === 'true',
       }),
     }),
+    // Bus de eventos de dominio que alimenta el motor de reglas.
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forFeature([Usuario, Taller]),
     TalleresModule,
     UsuariosModule,
     AuthModule,
     ClientesModule,
     VehiculosModule,
+    // Iteración 2
+    RepuestosModule,
+    OrdenesModule,
+    ReglasModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [

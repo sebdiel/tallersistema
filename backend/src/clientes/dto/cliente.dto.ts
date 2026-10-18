@@ -1,10 +1,11 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   MinLength,
@@ -14,6 +15,11 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || null : value;
 
 export class CreateClienteDto {
+  /** Opcional: lo envía el frontend cuando el cliente se registró sin conexión. */
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @Transform(trim)
   @IsString()
   @MinLength(3, { message: 'El nombre debe tener al menos 3 caracteres' })
@@ -41,7 +47,7 @@ export class CreateClienteDto {
   direccion?: string | null;
 }
 
-export class UpdateClienteDto extends PartialType(CreateClienteDto) {
+export class UpdateClienteDto extends PartialType(OmitType(CreateClienteDto, ['id'] as const)) {
   @IsOptional()
   @IsBoolean()
   activo?: boolean;

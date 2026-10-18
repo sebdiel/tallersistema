@@ -10,6 +10,7 @@ import { Cliente } from '../clientes/cliente.entity';
 import { UsuarioActual } from '../common/decorators/auth.decorators';
 import { normalizarPlaca } from '../common/utils/placa.util';
 import { tallerDe } from '../common/utils/taller.util';
+import { OrdenTrabajo } from '../ordenes/orden.entity';
 import { CreateVehiculoDto, UpdateVehiculoDto } from './dto/vehiculo.dto';
 import { Vehiculo } from './vehiculo.entity';
 
@@ -18,16 +19,17 @@ export class VehiculosService {
   constructor(
     @InjectRepository(Vehiculo) private readonly repo: Repository<Vehiculo>,
     @InjectRepository(Cliente) private readonly clientes: Repository<Cliente>,
+    @InjectRepository(OrdenTrabajo) private readonly ordenes: Repository<OrdenTrabajo>,
   ) {}
 
   /** HU-07: búsqueda por placa (parcial), marca o modelo. */
-  buscar(user: UsuarioActual, q?: string) {
+  buscar(user: UsuarioActual, q?: string, limite = 50) {
     const qb = this.repo
       .createQueryBuilder('v')
       .leftJoinAndSelect('v.cliente', 'c')
       .where('v.taller_id = :tallerId', { tallerId: tallerDe(user) })
       .orderBy('v.placa', 'ASC')
-      .take(50);
+      .take(limite);
 
     if (q?.trim()) {
       qb.andWhere('(v.placa ILIKE :placa OR v.marca ILIKE :q OR v.modelo ILIKE :q)', {
@@ -47,18 +49,22 @@ export class VehiculosService {
     return vehiculo;
   }
 
-  /**
-   * HU-07: ficha técnica + historial. El historial de órdenes de trabajo se
-   * completa en la Iteración 2; por ahora se devuelve vacío para que el
-   * frontend ya tenga la estructura definitiva.
-   */
+  /** HU-07: ficha técnica + historial de órdenes de trabajo del vehículo. */
   async ficha(user: UsuarioActual, id: string) {
     const vehiculo = await this.obtener(user, id);
-    return { vehiculo, historial: [] as unknown[] };
+    const historial = await this.ordenes.find({
+      where: { vehiculoId: id },
+      relations: { mecanico: true, repuestos: { repuesto: true } },
+      order: { fechaIngreso: 'DESC' },
+    });
+    return { vehiculo, historial };
   }
 
   async crear(user: UsuarioActual, dto: CreateVehiculoDto) {
     const tallerId = tallerDe(user);
+    if (dto.id && (await this.repo.exists({ where: { id: dto.id } }))) {
+      throw new ConflictException('El vehículo ya fue registrado');
+    }
     await this.verificarCliente(tallerId, dto.clienteId);
     await this.verificarPlacaLibre(tallerId, dto.placa);
     const { id } = await this.repo.save(this.repo.create({ ...dto, tallerId }));

@@ -18,13 +18,19 @@ tallersistema/
 │       ├── clientes/   registro y búsqueda (HU-04, HU-05)
 │       ├── vehiculos/  ficha técnica e historial (HU-06, HU-07)
 │       ├── talleres/   entidad multi-taller (base para Iteración 4)
+│       ├── repuestos/  inventario y kardex (HU-12, HU-14)
+│       ├── ordenes/    órdenes de trabajo + máquina de estados (HU-09 a HU-13, HU-17)
+│       ├── reglas/     motor de reglas por eventos + alertas (RN-12, RN-13)
+│       ├── sync/       sincronización offline idempotente (HU-16)
 │       ├── common/     guards de rol (HU-03), decoradores, utilidades
 │       └── database/   datos iniciales (seed)
 ├── frontend/           PWA Angular
 │   └── src/app/
-│       ├── core/       sesión, interceptor, guards, servicios API
-│       ├── layout/     barra y menú por rol
-│       └── features/   login, inicio, clientes, vehículos, usuarios
+│       ├── core/       sesión, API, IndexedDB (db.ts), cola offline (sync.service.ts),
+│       │               acceso a datos Local-First (datos.service.ts), máquina de estados
+│       ├── layout/     barra, menú por rol e indicador de sincronización
+│       └── features/   login, inicio, clientes, vehículos, usuarios,
+│                       ordenes, inventario, sync
 └── docker-compose.yml  PostgreSQL 16
 ```
 
@@ -87,3 +93,55 @@ Para probar la PWA instalable y el Service Worker hay que usar el build de produ
 - **Multi-taller desde el inicio:** todas las tablas operativas tienen `taller_id` y cada consulta se filtra por el taller del usuario. La Iteración 4 (SuperAdmin y suscripciones) no requiere rehacer el modelo.
 - **UUID como clave primaria:** permite crear registros offline en IndexedDB (Iteración 2) sin choques de id al sincronizar.
 - **`DB_SYNC=true` solo en desarrollo:** antes del despliegue en el VPS (Iteración 4) se reemplaza por migraciones de TypeORM.
+
+## Iteración 2: Órdenes de trabajo, inventario y modo offline (OE2)
+
+| HU | Historia | Estado |
+|---|---|---|
+| HU-09 | Abrir una OT al recibir el vehículo | ✅ |
+| HU-10 | Avanzar la OT según la máquina de estados | ✅ |
+| HU-11 | Asignar mecánico (el mecánico también puede tomar una OT libre) | ✅ |
+| HU-12 | Registrar repuestos, entradas de stock y ajustes por conteo | ✅ |
+| HU-13 | Agregar repuestos a la OT con descuento automático de stock | ✅ |
+| HU-14 | Alerta de stock bajo el mínimo | ✅ |
+| HU-15 | Registrar y trabajar la OT sin internet (IndexedDB) | ✅ |
+| HU-16 | Sincronización automática al volver la conexión | ✅ |
+| HU-17 | No cerrar una OT sin repuestos registrados ni confirmación | ✅ |
+
+### Máquina de estados de la OT
+
+```
+RECIBIDO ─► EN_DIAGNOSTICO ─► EN_REPARACION ─► TERMINADO ─► ENTREGADO
+   │              │                 │    ▲           │
+   └──────────────┴─────► CANCELADO ◄┘    └───────────┘ (reabrir con motivo)
+```
+
+### Reglas de negocio de la iteración
+
+| Código | Regla | Dónde |
+|---|---|---|
+| RN-06 | Un vehículo solo puede tener una OT abierta | `ordenes.service.ts` (con bloqueo de fila) |
+| RN-07 | El kilometraje de ingreso no puede ser menor al último; la OT lo actualiza | `ordenes.service.ts` |
+| RN-08 | Solo se permiten las transiciones de la máquina de estados | `maquina-estados.ts` |
+| RN-09 | No se pasa a reparación sin diagnóstico; no se diagnostica sin mecánico | `maquina-estados.ts` |
+| RN-10 | Usar un repuesto descuenta stock; nunca queda negativo (UPDATE atómico) | `repuestos.service.ts → moverStock` |
+| RN-11 | No se termina una OT sin repuestos registrados o confirmación de "sin repuestos" | `maquina-estados.ts` |
+| RN-12 | Alerta automática de stock mínimo, que se resuelve sola al reponer | `reglas/reglas.listener.ts` |
+| RN-13 | Al terminar una OT se genera el aviso "avisar al cliente" | `reglas/reglas.listener.ts` |
+| RN-14 | Cancelar una OT (con motivo) devuelve los repuestos al inventario | `ordenes.service.ts` |
+
+### Cómo funciona el modo offline (Local-First)
+
+1. Al entrar, el dispositivo descarga una copia de los datos del taller (`GET /api/sync/snapshot`) en IndexedDB.
+2. Cada cambio en una OT se valida en el dispositivo (las mismas reglas que el servidor), se aplica en la copia local y se guarda en una **cola de operaciones**.
+3. Con conexión, la cola se envía al instante (`POST /api/sync`). Sin conexión, espera y se envía sola al volver internet.
+4. El servidor procesa cada operación **una sola vez**: tiene un id único y reenviarla no duplica nada. Si una operación ya no cumple una regla al llegar (por ejemplo, otro usuario usó el último repuesto), se informa como **conflicto** en la pantalla *Sincronización*.
+5. Se conserva la hora real en la que se hizo cada cambio en el dispositivo. Los KPIs de tiempo de la Iteración 3 dependen de ese dato.
+
+> El modo offline completo (abrir la app sin internet) requiere el build de producción, porque en `ng serve` el Service Worker está desactivado.
+
+### Pruebas realizadas
+
+- **Unitarias** (`npm test` en backend): máquina de estados y normalización de placa (10 pruebas).
+- **API de punta a punta**: 33 comprobaciones del flujo completo: inventario, OT, reglas RN-06 a RN-14, alertas, sincronización idempotente y conflictos.
+- **Navegador real con PWA de producción** (Edge sin interfaz, 412 px de ancho): recibir un vehículo y un cliente nuevos sin internet, diagnosticar, cargar repuestos, recargar la app sin conexión, volver a tener conexión y comprobar que el servidor confirma todo (15 comprobaciones).

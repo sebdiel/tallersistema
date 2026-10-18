@@ -1,7 +1,18 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { API_URL } from './config';
-import { Cliente, FichaVehiculo, Usuario, Vehiculo } from './models';
+import {
+  Alerta,
+  Cliente,
+  EstadoOrden,
+  FichaVehiculo,
+  MovimientoInventario,
+  OrdenTrabajo,
+  Repuesto,
+  Snapshot,
+  Usuario,
+  Vehiculo,
+} from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ClientesApi {
@@ -58,5 +69,90 @@ export class UsuariosApi {
   }
   actualizar(id: string, data: Partial<Usuario> & { password?: string }) {
     return this.http.patch<Usuario>(`${this.url}/${id}`, data);
+  }
+}
+
+// ---------------------------------------------------------------- Iteración 2
+
+@Injectable({ providedIn: 'root' })
+export class RepuestosApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/repuestos`;
+
+  buscar(q = '', bajoStock = false, inactivos = false) {
+    return this.http.get<Repuesto[]>(this.url, { params: { q, bajoStock, inactivos } });
+  }
+  detalle(id: string) {
+    return this.http.get<{ repuesto: Repuesto; movimientos: MovimientoInventario[] }>(
+      `${this.url}/${id}`,
+    );
+  }
+  crear(data: Partial<Repuesto>) {
+    return this.http.post<Repuesto>(this.url, data);
+  }
+  actualizar(id: string, data: Partial<Repuesto>) {
+    return this.http.patch<Repuesto>(`${this.url}/${id}`, data);
+  }
+  entrada(id: string, data: { cantidad: number; precioCompra?: number; motivo?: string }) {
+    return this.http.post<Repuesto>(`${this.url}/${id}/entradas`, data);
+  }
+  ajuste(id: string, data: { stockReal: number; motivo: string }) {
+    return this.http.post<Repuesto>(`${this.url}/${id}/ajustes`, data);
+  }
+}
+
+export interface FiltroOrdenes {
+  estado?: EstadoOrden;
+  abiertas?: boolean;
+  q?: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class OrdenesApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/ordenes`;
+
+  listar(f: FiltroOrdenes = {}) {
+    const params: Record<string, string | boolean> = {};
+    if (f.estado) params['estado'] = f.estado;
+    if (f.abiertas) params['abiertas'] = true;
+    if (f.q) params['q'] = f.q;
+    return this.http.get<OrdenTrabajo[]>(this.url, { params });
+  }
+  obtener(id: string) {
+    return this.http.get<OrdenTrabajo>(`${this.url}/${id}`);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class AlertasApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/alertas`;
+
+  listar() {
+    return this.http.get<Alerta[]>(this.url);
+  }
+  resolver(id: string) {
+    return this.http.post<{ ok: boolean }>(`${this.url}/${id}/resolver`, {});
+  }
+}
+
+export interface ResultadoSync {
+  id: string;
+  ok: boolean;
+  error?: string;
+  reintentar?: boolean;
+}
+
+@Injectable({ providedIn: 'root' })
+export class SyncApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/sync`;
+
+  snapshot() {
+    return this.http.get<Snapshot>(`${this.url}/snapshot`);
+  }
+  enviar(operaciones: unknown[]) {
+    return this.http.post<{ resultados: ResultadoSync[] }>(this.url, { operaciones });
   }
 }

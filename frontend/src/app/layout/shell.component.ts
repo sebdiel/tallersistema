@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ConexionService } from '../core/conexion.service';
 import { ROL_LABEL, Rol } from '../core/models';
+import { SyncService } from '../core/sync.service';
 
 interface ItemMenu {
   ruta: string;
@@ -13,8 +14,10 @@ interface ItemMenu {
 
 const MENU: ItemMenu[] = [
   { ruta: '/', texto: 'Inicio', icono: '🏠', roles: ['ADMIN', 'MECANICO', 'SUPERADMIN'] },
-  { ruta: '/clientes', texto: 'Clientes', icono: '👤', roles: ['ADMIN', 'MECANICO'] },
+  { ruta: '/ordenes', texto: 'Órdenes', icono: '📋', roles: ['ADMIN', 'MECANICO'] },
   { ruta: '/vehiculos', texto: 'Vehículos', icono: '🚗', roles: ['ADMIN', 'MECANICO'] },
+  { ruta: '/inventario', texto: 'Inventario', icono: '📦', roles: ['ADMIN', 'MECANICO'] },
+  { ruta: '/clientes', texto: 'Clientes', icono: '👤', roles: ['ADMIN', 'MECANICO'] },
   { ruta: '/usuarios', texto: 'Usuarios', icono: '🔧', roles: ['ADMIN'] },
 ];
 
@@ -29,6 +32,7 @@ const MENU: ItemMenu[] = [
 export class ShellComponent {
   readonly auth = inject(AuthService);
   readonly conexion = inject(ConexionService);
+  readonly sync = inject(SyncService);
   readonly rolLabel = ROL_LABEL;
 
   // HU-03: el menú solo muestra lo que el rol puede usar.
@@ -36,4 +40,14 @@ export class ShellComponent {
     const rol = this.auth.usuario()?.rol;
     return MENU.filter((m) => rol && m.roles.includes(rol));
   });
+
+  constructor() {
+    // El SUPERADMIN no opera un taller: no necesita datos offline.
+    if (!this.auth.tieneRol('SUPERADMIN')) this.sync.iniciar();
+  }
+
+  async salir() {
+    await this.sync.limpiarCache();
+    this.auth.logout();
+  }
 }

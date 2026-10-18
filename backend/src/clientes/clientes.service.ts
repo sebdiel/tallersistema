@@ -19,13 +19,13 @@ export class ClientesService {
   ) {}
 
   /** HU-05: búsqueda por nombre, CI/NIT o teléfono. */
-  buscar(user: UsuarioActual, q?: string, incluirInactivos = false) {
+  buscar(user: UsuarioActual, q?: string, incluirInactivos = false, limite = 50) {
     const qb = this.repo
       .createQueryBuilder('c')
       .loadRelationCountAndMap('c.totalVehiculos', 'c.vehiculos')
       .where('c.taller_id = :tallerId', { tallerId: tallerDe(user) })
       .orderBy('c.nombre', 'ASC')
-      .take(50);
+      .take(limite);
 
     if (!incluirInactivos) qb.andWhere('c.activo = true');
     if (q?.trim()) {
@@ -49,6 +49,9 @@ export class ClientesService {
 
   async crear(user: UsuarioActual, dto: CreateClienteDto) {
     const tallerId = tallerDe(user);
+    if (dto.id && (await this.repo.exists({ where: { id: dto.id } }))) {
+      throw new ConflictException('El cliente ya fue registrado');
+    }
     if (dto.ciNit) await this.verificarCiLibre(tallerId, dto.ciNit);
     const { id } = await this.repo.save(this.repo.create({ ...dto, tallerId }));
     return this.obtener(user, id);
