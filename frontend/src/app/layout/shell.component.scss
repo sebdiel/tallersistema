@@ -1,0 +1,152 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--primario);
+  color: #fff;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  font-size: 1.6rem;
+}
+
+.nombre-app {
+  font-weight: 700;
+}
+
+.taller,
+.u-rol {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.derecha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.usuario {
+  display: none;
+  text-align: right;
+}
+
+.u-nombre {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.estado {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #16a34a;
+}
+
+.estado.offline {
+  background: var(--acento);
+  color: #000;
+}
+
+.salir {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.cuerpo {
+  flex: 1;
+  display: flex;
+}
+
+.contenido {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 72px; /* espacio para el menú inferior en móvil */
+}
+
+/* Móvil: menú fijo abajo, al alcance del pulgar */
+.menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-around;
+  background: var(--superficie);
+  border-top: 1px solid var(--borde);
+}
+
+.menu a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+}
+
+.menu a.activo {
+  color: var(--primario);
+  font-weight: 700;
+}
+
+.icono {
+  font-size: 1.3rem;
+}
+
+/* Tablet horizontal / escritorio: menú lateral */
+@media (min-width: 900px) {
+  .usuario {
+    display: block;
+  }
+
+  .contenido {
+    padding-bottom: 0;
+  }
+
+  .menu {
+    position: sticky;
+    top: 56px;
+    align-self: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 210px;
+    height: calc(100vh - 56px);
+    padding: 12px 8px;
+    border-top: none;
+    border-right: 1px solid var(--borde);
+  }
+
+  .menu a {
+    flex: none;
+    flex-direction: row;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+
+  .menu a.activo {
+    background: var(--fondo);
+  }
+}

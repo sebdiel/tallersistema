@@ -1,0 +1,41 @@
+@if (auth.usuario(); as u) {
+  <header class="barra">
+    <div class="marca">
+      <span class="logo">🔩</span>
+      <div>
+        <div class="nombre-app">TallerPro</div>
+        <div class="taller">{{ u.taller?.nombre ?? 'Administración global' }}</div>
+      </div>
+    </div>
+
+    <div class="derecha">
+      <span class="estado" [class.offline]="!conexion.enLinea()">
+        {{ conexion.enLinea() ? 'En línea' : 'Sin conexión' }}
+      </span>
+      <div class="usuario">
+        <div class="u-nombre">{{ u.nombre }}</div>
+        <div class="u-rol">{{ rolLabel[u.rol] }}</div>
+      </div>
+      <button class="btn btn-sec salir" (click)="auth.logout()" title="Cerrar sesión">Salir</button>
+    </div>
+  </header>
+
+  <div class="cuerpo">
+    <nav class="menu">
+      @for (item of menu(); track item.ruta) {
+        <a
+          [routerLink]="item.ruta"
+          routerLinkActive="activo"
+          [routerLinkActiveOptions]="{ exact: item.ruta === '/' }"
+        >
+          <span class="icono">{{ item.icono }}</span>
+          <span>{{ item.texto }}</span>
+        </a>
+      }
+    </nav>
+
+    <main class="contenido">
+      <router-outlet />
+    </main>
+  </div>
+}
