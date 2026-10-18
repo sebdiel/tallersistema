@@ -40,6 +40,17 @@ export class OrdenRepuesto {
   })
   precioUnitario: number;
 
+  /** Precio de compra vigente al usarse: permite calcular el margen (KPI). */
+  @Column({
+    name: 'costo_unitario',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: numeric,
+  })
+  costoUnitario: number;
+
   @Column({ name: 'usuario_id', type: 'uuid' })
   usuarioId: string;
 

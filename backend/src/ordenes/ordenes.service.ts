@@ -18,12 +18,18 @@ import { Repuesto } from '../repuestos/repuesto.entity';
 import { RepuestosService } from '../repuestos/repuestos.service';
 import { Usuario } from '../usuarios/usuario.entity';
 import { Vehiculo } from '../vehiculos/vehiculo.entity';
+import { Servicio } from '../servicios/servicio.entity';
+import { Totales, calcularTotales } from './costos';
 import {
+  AgregarManoObraDto,
   AgregarRepuestoDto,
+  AnularPagoDto,
   AsignarMecanicoDto,
   CambiarEstadoDto,
   CreateOrdenDto,
+  DescuentoDto,
   FiltroOrdenesDto,
+  RegistrarPagoDto,
   UpdateOrdenDto,
 } from './dto/orden.dto';
 import { HistorialEstado } from './historial-estado.entity';
@@ -33,10 +39,21 @@ import {
   EstadoOrden,
   validarTransicion,
 } from './maquina-estados';
+import { OrdenManoObra } from './orden-mano-obra.entity';
 import { OrdenRepuesto } from './orden-repuesto.entity';
 import { OrdenTrabajo } from './orden.entity';
+import { Pago } from './pago.entity';
 
 export const formatoNumero = (n: number) => `OT-${String(n).padStart(4, '0')}`;
+
+/** Mano de obra, descuento y pagos se pueden modificar mientras la OT está abierta. */
+const ESTADOS_CON_COSTOS = ESTADOS_ABIERTOS;
+
+/** Agrega los totales calculados (RN-15) a la respuesta. */
+const conTotales = <T extends OrdenTrabajo>(o: T): T & { totales: Totales } => ({
+  ...o,
+  totales: calcularTotales(o),
+});
 
 @Injectable()
 export class OrdenesService {
@@ -49,7 +66,7 @@ export class OrdenesService {
 
   // ---------------------------------------------------------------- consultas
 
-  listar(user: UsuarioActual, f: FiltroOrdenesDto) {
+  async listar(user: UsuarioActual, f: FiltroOrdenesDto) {
     const qb = this.repo
       .createQueryBuilder('o')
       .leftJoinAndSelect('o.vehiculo', 'v')
@@ -57,6 +74,8 @@ export class OrdenesService {
       .leftJoinAndSelect('o.mecanico', 'm')
       .leftJoinAndSelect('o.repuestos', 'r')
       .leftJoinAndSelect('r.repuesto', 'rp')
+      .leftJoinAndSelect('o.manoObra', 'mo')
+      .leftJoinAndSelect('o.pagos', 'pg')
       .where('o.taller_id = :tallerId', { tallerId: tallerDe(user) })
       // Con take() + joins TypeORM exige el nombre de la propiedad, no de la columna.
       .orderBy('o.fechaIngreso', 'DESC');
@@ -73,7 +92,7 @@ export class OrdenesService {
       );
     }
     if (!f.abiertas) qb.take(100);
-    return qb.getMany();
+    return (await qb.getMany()).map(conTotales);
   }
 
   async obtener(user: UsuarioActual, id: string) {
@@ -85,11 +104,18 @@ export class OrdenesService {
         mecanico: true,
         repuestos: { repuesto: true },
         historial: { usuario: true },
+        manoObra: { mecanico: true },
+        pagos: { usuario: true },
       },
-      order: { repuestos: { createdAt: 'ASC' }, historial: { fecha: 'ASC' } },
+      order: {
+        repuestos: { createdAt: 'ASC' },
+        historial: { fecha: 'ASC' },
+        manoObra: { createdAt: 'ASC' },
+        pagos: { fecha: 'ASC' },
+      },
     });
     if (!orden) throw new NotFoundException('Orden de trabajo no encontrada');
-    return orden;
+    return conTotales(orden);
   }
 
   /** Cantidad de órdenes abiertas por estado (pantalla de inicio). */
@@ -232,8 +258,15 @@ export class OrdenesService {
       }
 
       const lineas = await m.find(OrdenRepuesto, { where: { ordenId: id } });
+      const totales = await this.totalesDe(m, orden);
       const error = validarTransicion(
-        { ...orden, totalRepuestos: lineas.length },
+        {
+          ...orden,
+          totalRepuestos: lineas.length,
+          saldo: totales.saldo,
+          pagado: totales.pagado,
+          esAdmin: user.rol === Rol.ADMIN,
+        },
         dto.estado,
         dto.comentario,
       );
@@ -324,6 +357,7 @@ export class OrdenesService {
         repuestoId: repuesto.id,
         cantidad: dto.cantidad,
         precioUnitario: repuesto.precioVenta,
+        costoUnitario: repuesto.precioCompra,
         usuarioId: user.id,
       });
       if (orden.sinRepuestos) await m.update(OrdenTrabajo, id, { sinRepuestos: false });
@@ -343,6 +377,7 @@ export class OrdenesService {
 
       const linea = await m.findOne(OrdenRepuesto, { where: { id: lineaId, ordenId: id } });
       if (!linea) throw new NotFoundException('El repuesto no está en la orden');
+      await this.verificarTotalCubrePagos(m, orden, linea.cantidad * linea.precioUnitario);
 
       await this.repuestos.moverStock(m, linea.cantidad, TipoMovimiento.DEVOLUCION, {
         tallerId: orden.tallerId,
@@ -359,7 +394,153 @@ export class OrdenesService {
     return this.obtener(user, id);
   }
 
+  // ------------------------------------------------- costos y pagos (Iteración 3)
+
+  /** HU-18: agregar mano de obra (libre o desde el catálogo de servicios). */
+  async agregarManoObra(user: UsuarioActual, id: string, dto: AgregarManoObraDto) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarPermiso(user, orden);
+      this.verificarEstadoCostos(orden);
+
+      if (dto.id && (await m.exists(OrdenManoObra, { where: { id: dto.id } }))) {
+        throw new ConflictException('La mano de obra ya fue registrada');
+      }
+      let descripcion = dto.descripcion;
+      let monto = dto.monto;
+      if (dto.servicioId) {
+        const servicio = await m.findOne(Servicio, {
+          where: { id: dto.servicioId, tallerId: orden.tallerId },
+        });
+        if (!servicio) throw new BadRequestException('El servicio no existe');
+        descripcion ??= servicio.nombre;
+        monto ??= servicio.precio;
+      }
+      if (!descripcion) throw new BadRequestException('Describa el trabajo realizado');
+      if (monto === undefined) throw new BadRequestException('Indique el monto de la mano de obra');
+
+      const mecanicoId = dto.mecanicoId ?? orden.mecanicoId;
+      if (mecanicoId) await this.verificarMecanico(m, orden.tallerId, mecanicoId);
+
+      await m.insert(OrdenManoObra, {
+        id: dto.id ?? randomUUID(),
+        ordenId: id,
+        servicioId: dto.servicioId ?? null,
+        descripcion,
+        monto,
+        mecanicoId,
+        usuarioId: user.id,
+      });
+    });
+    return this.obtener(user, id);
+  }
+
+  async quitarManoObra(user: UsuarioActual, id: string, lineaId: string) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarPermiso(user, orden);
+      this.verificarEstadoCostos(orden);
+      const linea = await m.findOne(OrdenManoObra, { where: { id: lineaId, ordenId: id } });
+      if (!linea) throw new NotFoundException('La mano de obra no está en la orden');
+      await this.verificarTotalCubrePagos(m, orden, linea.monto);
+      await m.delete(OrdenManoObra, linea.id);
+    });
+    return this.obtener(user, id);
+  }
+
+  /** RN-16: descuento solo del administrador y nunca mayor al subtotal. */
+  async aplicarDescuento(user: UsuarioActual, id: string, dto: DescuentoDto) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarEstadoCostos(orden);
+      const t = await this.totalesDe(m, orden);
+      if (dto.descuento > t.subtotal) {
+        throw new BadRequestException(
+          `El descuento no puede superar el subtotal (Bs ${t.subtotal.toFixed(2)})`,
+        );
+      }
+      // RN-17: el nuevo total no puede quedar por debajo de lo ya cobrado.
+      if (t.subtotal - dto.descuento < t.pagado - 0.001) {
+        throw new BadRequestException(
+          `Con ese descuento el total quedaría por debajo de lo ya pagado (Bs ${t.pagado.toFixed(2)})`,
+        );
+      }
+      await m.update(OrdenTrabajo, id, { descuento: dto.descuento });
+    });
+    return this.obtener(user, id);
+  }
+
+  /** HU-21 / RN-17: registrar un pago (total, parcial o adelanto) sin exceder el saldo. */
+  async registrarPago(user: UsuarioActual, id: string, dto: RegistrarPagoDto) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      if (orden.estado === EstadoOrden.CANCELADO) {
+        throw new BadRequestException('No se registran pagos en una orden cancelada');
+      }
+      if (dto.id && (await m.exists(Pago, { where: { id: dto.id } }))) {
+        throw new ConflictException('El pago ya fue registrado');
+      }
+      const t = await this.totalesDe(m, orden);
+      if (dto.monto > t.saldo + 0.001) {
+        throw new BadRequestException(
+          t.saldo <= 0
+            ? 'La orden no tiene saldo pendiente'
+            : `El pago supera el saldo pendiente (Bs ${t.saldo.toFixed(2)})`,
+        );
+      }
+      await m.insert(Pago, {
+        id: dto.id ?? randomUUID(),
+        tallerId: orden.tallerId,
+        ordenId: id,
+        monto: dto.monto,
+        metodo: dto.metodo,
+        referencia: dto.referencia ?? null,
+        fecha: fechaValida(dto.fecha, orden.fechaIngreso),
+        usuarioId: user.id,
+      });
+    });
+    return this.obtener(user, id);
+  }
+
+  /** Los pagos no se eliminan: se anulan con motivo (solo ADMIN). */
+  async anularPago(user: UsuarioActual, id: string, pagoId: string, dto: AnularPagoDto) {
+    await this.dataSource.transaction(async (m) => {
+      await this.bloquear(m, user, id);
+      const pago = await m.findOne(Pago, { where: { id: pagoId, ordenId: id } });
+      if (!pago) throw new NotFoundException('Pago no encontrado');
+      if (pago.anulado) throw new BadRequestException('El pago ya está anulado');
+      await m.update(Pago, pagoId, { anulado: true, motivoAnulacion: dto.motivo });
+    });
+    return this.obtener(user, id);
+  }
+
   // ---------------------------------------------------------------- auxiliares
+
+  private async totalesDe(m: EntityManager, orden: OrdenTrabajo): Promise<Totales> {
+    const [repuestos, manoObra, pagos] = await Promise.all([
+      m.find(OrdenRepuesto, { where: { ordenId: orden.id } }),
+      m.find(OrdenManoObra, { where: { ordenId: orden.id } }),
+      m.find(Pago, { where: { ordenId: orden.id } }),
+    ]);
+    return calcularTotales({ descuento: orden.descuento, repuestos, manoObra, pagos });
+  }
+
+  /** RN-17: quitar un cargo no puede dejar el total por debajo de lo ya pagado. */
+  private async verificarTotalCubrePagos(m: EntityManager, orden: OrdenTrabajo, montoQuitado: number) {
+    const t = await this.totalesDe(m, orden);
+    if (t.total - montoQuitado < t.pagado - 0.001) {
+      throw new BadRequestException(
+        `No se puede quitar: el total quedaría por debajo de lo ya pagado (Bs ${t.pagado.toFixed(2)}). Anule el pago primero`,
+      );
+    }
+  }
+
+  private verificarEstadoCostos(orden: OrdenTrabajo) {
+    if (!ESTADOS_CON_COSTOS.includes(orden.estado)) {
+      throw new BadRequestException('Los costos de una orden cerrada ya no se pueden modificar');
+    }
+  }
+
 
   /** Lee la OT bloqueando la fila hasta el fin de la transacción. */
   private async bloquear(m: EntityManager, user: UsuarioActual, id: string) {

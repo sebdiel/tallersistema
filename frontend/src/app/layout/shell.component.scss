@@ -152,3 +152,80 @@
     background: var(--fondo);
   }
 }
+
+/* ---------- Menú "Más" (Iteración 3) ---------- */
+
+.menu a.secundario {
+  display: none;
+}
+
+.mas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+  cursor: pointer;
+}
+
+.mas.activo {
+  color: var(--primario);
+  font-weight: 700;
+}
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.hoja-mas {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 60px;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 12px;
+  background: var(--superficie);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.hoja-mas a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+  border-radius: 10px;
+  color: var(--texto);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.hoja-mas a.activo {
+  background: var(--fondo);
+  color: var(--primario);
+  font-weight: 700;
+}
+
+@media (min-width: 900px) {
+  .menu a.secundario {
+    display: flex;
+  }
+  .mas,
+  .velo,
+  .hoja-mas {
+    display: none;
+  }
+}

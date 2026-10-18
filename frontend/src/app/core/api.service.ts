@@ -4,6 +4,9 @@ import { API_URL } from './config';
 import {
   Alerta,
   Cliente,
+  Dashboard,
+  Servicio,
+  Taller,
   EstadoOrden,
   FichaVehiculo,
   MovimientoInventario,
@@ -154,5 +157,45 @@ export class SyncApi {
   }
   enviar(operaciones: unknown[]) {
     return this.http.post<{ resultados: ResultadoSync[] }>(this.url, { operaciones });
+  }
+}
+
+// ---------------------------------------------------------------- Iteración 3
+
+@Injectable({ providedIn: 'root' })
+export class ServiciosApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/servicios`;
+
+  listar(inactivos = false) {
+    return this.http.get<Servicio[]>(this.url, { params: { inactivos } });
+  }
+  crear(data: Partial<Servicio>) {
+    return this.http.post<Servicio>(this.url, data);
+  }
+  actualizar(id: string, data: Partial<Servicio>) {
+    return this.http.patch<Servicio>(`${this.url}/${id}`, data);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class TallerApi {
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_URL}/taller`;
+
+  obtener() {
+    return this.http.get<Taller>(this.url);
+  }
+  actualizar(data: Partial<Taller>) {
+    return this.http.patch<Taller>(this.url, data);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class DashboardApi {
+  private readonly http = inject(HttpClient);
+
+  kpis(desde: string, hasta: string) {
+    return this.http.get<Dashboard>(`${API_URL}/dashboard`, { params: { desde, hasta } });
   }
 }

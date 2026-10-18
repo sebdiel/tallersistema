@@ -44,6 +44,10 @@ export interface OrdenParaTransicion {
   mecanicoId: string | null;
   sinRepuestos: boolean;
   totalRepuestos: number;
+  /** Iteración 3: saldo y pagos de la OT, y si quien opera es administrador. */
+  saldo?: number;
+  pagado?: number;
+  esAdmin?: boolean;
 }
 
 /**
@@ -78,6 +82,22 @@ export function validarTransicion(
       break;
     case EstadoOrden.CANCELADO:
       if (!comentario?.trim()) return 'Indique el motivo de la cancelación';
+      // RN-19: primero se anulan los pagos (quedan registrados como anulados).
+      if ((orden.pagado ?? 0) > 0) {
+        return 'La orden tiene pagos registrados. Anúlelos antes de cancelar';
+      }
+      break;
+    case EstadoOrden.ENTREGADO:
+      // RN-18: no se entrega con deuda, salvo crédito autorizado por el administrador.
+      if ((orden.saldo ?? 0) > 0) {
+        const saldo = (orden.saldo ?? 0).toFixed(2);
+        if (!orden.esAdmin) {
+          return `El cliente tiene un saldo pendiente de Bs ${saldo}. Registre el pago antes de entregar`;
+        }
+        if (!comentario?.trim()) {
+          return `Saldo pendiente de Bs ${saldo}: para entregar a crédito indique un comentario`;
+        }
+      }
       break;
   }
 

@@ -12,6 +12,9 @@
           }
         </div>
       </div>
+      <a class="btn btn-sec" [routerLink]="['/ordenes', o.id, 'comprobante']">
+        🧾 {{ o.estado === 'ENTREGADO' || o.estado === 'TERMINADO' ? 'Comprobante' : 'Presupuesto' }}
+      </a>
     </div>
 
     @if (error()) {
@@ -41,7 +44,11 @@
         @if (confirmando(); as destino) {
           <div class="campo" style="margin-top: 12px">
             <label class="req" for="motivo">
-              {{ destino === 'CANCELADO' ? 'Motivo de la cancelación' : 'Motivo para reabrir' }}
+              @switch (destino) {
+                @case ('CANCELADO') { Motivo de la cancelación }
+                @case ('ENTREGADO') { Entrega a crédito (saldo Bs {{ totales()?.saldo | number: '1.2-2' }}): comentario }
+                @default { Motivo para reabrir }
+              }
             </label>
             <textarea id="motivo" rows="2" [(ngModel)]="comentario"></textarea>
             @if (destino === 'CANCELADO' && o.repuestos?.length) {
@@ -152,7 +159,7 @@
           <tfoot>
             <tr>
               <th colspan="3">Total repuestos (Bs)</th>
-              <th class="num">{{ totalRepuestos() | number: '1.2-2' }}</th>
+              <th class="num">{{ totales()?.repuestos | number: '1.2-2' }}</th>
             </tr>
           </tfoot>
         </table>
@@ -202,6 +209,172 @@
         </div>
       }
     </section>
+
+    <!-- HU-18: mano de obra -->
+    <section class="card">
+      <h2>Mano de obra</h2>
+      @if (o.manoObra?.length) {
+        <table class="tabla">
+          <tbody>
+            @for (l of o.manoObra; track l.id) {
+              <tr>
+                <td>
+                  {{ l.descripcion }}
+                  @if (l.mecanico) {
+                    <div class="item-sub">🔧 {{ l.mecanico.nombre }}</div>
+                  }
+                </td>
+                <td class="num">{{ l.monto | number: '1.2-2' }}</td>
+                @if (costosEditables()) {
+                  <td class="num">
+                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitarManoObra(l)">✕</button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Total mano de obra (Bs)</th>
+              <th class="num">{{ totales()?.manoObra | number: '1.2-2' }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      } @else {
+        <p class="item-sub">No hay mano de obra registrada.</p>
+      }
+
+      @if (costosEditables()) {
+        <div class="grid-2" style="margin-top: 12px">
+          <div class="campo">
+            <label for="srv">Servicio del catálogo</label>
+            <select id="srv" [ngModel]="mo.servicioId" (ngModelChange)="elegirServicio($event)">
+              <option value="">— Trabajo libre —</option>
+              @for (s of servicios(); track s.id) {
+                <option [value]="s.id">{{ s.nombre }} — Bs {{ s.precio | number: '1.2-2' }}</option>
+              }
+            </select>
+          </div>
+          <div class="campo">
+            <label for="mod">Descripción</label>
+            <input id="mod" [(ngModel)]="mo.descripcion" placeholder="Trabajo realizado" />
+          </div>
+          <div class="campo">
+            <label for="mom">Monto (Bs)</label>
+            <input id="mom" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="mo.monto" />
+          </div>
+          <div class="campo" style="justify-content: flex-end">
+            <button class="btn" [disabled]="procesando() || !mo.descripcion || mo.monto == null" (click)="agregarManoObra()">
+              Agregar mano de obra
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- HU-19 / HU-21: costos y pagos -->
+    @if (totales(); as t) {
+      <section class="card">
+        <h2>Costo y pagos</h2>
+        <dl class="datos">
+          <dt>Repuestos</dt>
+          <dd class="num">Bs {{ t.repuestos | number: '1.2-2' }}</dd>
+          <dt>Mano de obra</dt>
+          <dd class="num">Bs {{ t.manoObra | number: '1.2-2' }}</dd>
+          <dt>Descuento</dt>
+          <dd class="num">
+            @if (auth.tieneRol('ADMIN') && costosEditables()) {
+              <span class="descuento">
+                − Bs <input type="number" min="0" step="1" [(ngModel)]="descuento" />
+                <button class="btn btn-sec" [disabled]="procesando() || descuento === o.descuento" (click)="aplicarDescuento()">Aplicar</button>
+              </span>
+            } @else {
+              − Bs {{ t.descuento | number: '1.2-2' }}
+            }
+          </dd>
+          <dt><strong>Total</strong></dt>
+          <dd class="num"><strong>Bs {{ t.total | number: '1.2-2' }}</strong></dd>
+          <dt>Pagado</dt>
+          <dd class="num">Bs {{ t.pagado | number: '1.2-2' }}</dd>
+          <dt><strong>Saldo</strong></dt>
+          <dd class="num" [class.stock-bajo]="t.saldo > 0"><strong>Bs {{ t.saldo | number: '1.2-2' }}</strong></dd>
+        </dl>
+
+        @if (o.pagos?.length) {
+          <h2 style="margin-top: 16px">Pagos</h2>
+          <table class="tabla">
+            <tbody>
+              @for (p of o.pagos; track p.id) {
+                <tr [style.opacity]="p.anulado ? 0.55 : 1">
+                  <td>
+                    {{ p.fecha | date: 'dd/MM HH:mm' }} · {{ p.metodo }}
+                    @if (p.referencia) {
+                      · {{ p.referencia }}
+                    }
+                    <div class="item-sub">
+                      {{ p.usuario?.nombre }}
+                      @if (p.anulado) {
+                        · <strong>ANULADO</strong>: {{ p.motivoAnulacion }}
+                      }
+                    </div>
+                  </td>
+                  <td class="num" [style.text-decoration]="p.anulado ? 'line-through' : 'none'">
+                    {{ p.monto | number: '1.2-2' }}
+                  </td>
+                  @if (auth.tieneRol('ADMIN') && !p.anulado) {
+                    <td class="num">
+                      <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" (click)="anulando.set(p)">Anular</button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        @if (anulando(); as p) {
+          <div class="campo" style="margin-top: 12px">
+            <label class="req" for="manu">Motivo para anular el pago de Bs {{ p.monto | number: '1.2-2' }}</label>
+            <input id="manu" [(ngModel)]="motivoAnulacion" />
+          </div>
+          <div class="acciones">
+            <button class="btn btn-sec" (click)="anulando.set(null)">Volver</button>
+            <button class="btn btn-peligro" [disabled]="procesando() || motivoAnulacion.trim().length < 3" (click)="confirmarAnulacion()">
+              Anular pago
+            </button>
+          </div>
+        }
+
+        @if (t.saldo > 0 && o.estado !== 'CANCELADO') {
+          <div class="grid-2" style="margin-top: 16px">
+            <div class="campo">
+              <label for="pm">Registrar pago (Bs)</label>
+              <input id="pm" type="number" min="0.01" step="0.5" inputmode="decimal" [(ngModel)]="pago.monto" [placeholder]="'Saldo: ' + (t.saldo | number: '1.2-2')" />
+            </div>
+            <div class="campo">
+              <label for="pmet">Método</label>
+              <select id="pmet" [(ngModel)]="pago.metodo">
+                @for (m of metodos; track m.valor) {
+                  <option [value]="m.valor">{{ m.texto }}</option>
+                }
+              </select>
+            </div>
+            @if (pago.metodo !== 'EFECTIVO') {
+              <div class="campo">
+                <label for="pref">N.º de transacción</label>
+                <input id="pref" [(ngModel)]="pago.referencia" />
+              </div>
+            }
+            <div class="campo" style="justify-content: flex-end">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <button class="btn btn-sec" type="button" (click)="pago.monto = t.saldo">Todo el saldo</button>
+                <button class="btn" [disabled]="procesando() || !((pago.monto ?? 0) > 0)" (click)="registrarPago()">Registrar pago</button>
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+    }
 
     <!-- Historial de estados -->
     <section class="card">

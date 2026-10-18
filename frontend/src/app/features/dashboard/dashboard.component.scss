@@ -1,0 +1,162 @@
+.filtros-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rango {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+
+.rango input {
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  background: var(--superficie);
+}
+
+.periodo {
+  margin: 0 0 12px;
+}
+
+/* Fila de indicadores (stat tiles) */
+.kpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+@media (min-width: 900px) {
+  .kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.kpi {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-titulo {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+.kpi-valor {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-delta {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.kpi-delta.mejora {
+  color: var(--exito);
+}
+
+.kpi-delta.empeora {
+  color: var(--peligro);
+}
+
+.kpi-delta.neutro {
+  color: var(--texto-suave);
+}
+
+.kpi-ayuda {
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+}
+
+/* Rejilla de tarjetas */
+.rejilla {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rejilla .card {
+  margin: 0;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ancho {
+    grid-column: 1 / -1;
+  }
+}
+
+.grafica {
+  position: relative;
+  height: 260px;
+}
+
+.grafica.corta {
+  height: 200px;
+}
+
+details {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--primario-claro);
+}
+
+.metodos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.abiertas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.abierta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  color: var(--texto);
+}
+
+.cifra {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+  color: var(--texto);
+  font-size: 0.9rem;
+}

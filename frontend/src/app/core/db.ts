@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { Cliente, OrdenTrabajo, Persona, Repuesto, Vehiculo } from './models';
+import { Cliente, OrdenTrabajo, Persona, Repuesto, Servicio, Vehiculo } from './models';
 
 /** Operación hecha en el dispositivo, pendiente de enviar al servidor. */
 export interface OperacionPendiente {
@@ -32,6 +32,7 @@ export class TallerDb extends Dexie {
   repuestos!: Table<Repuesto, string>;
   ordenes!: Table<OrdenTrabajo, string>;
   personal!: Table<Persona, string>;
+  servicios!: Table<Servicio, string>;
   cola!: Table<OperacionPendiente, string>;
   conflictos!: Table<Conflicto, string>;
   meta!: Table<{ clave: string; valor: string }, string>;
@@ -48,6 +49,8 @@ export class TallerDb extends Dexie {
       conflictos: 'id',
       meta: 'clave',
     });
+    // Iteración 3: catálogo de servicios para cargar mano de obra sin conexión.
+    this.version(2).stores({ servicios: 'id, nombre' });
   }
 }
 

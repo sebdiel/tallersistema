@@ -33,12 +33,32 @@
           [routerLink]="item.ruta"
           routerLinkActive="activo"
           [routerLinkActiveOptions]="{ exact: item.ruta === '/' }"
+          [class.secundario]="!item.principal"
         >
           <span class="icono">{{ item.icono }}</span>
           <span>{{ item.texto }}</span>
         </a>
       }
+      <!-- Celular: el resto de opciones van en "Más" -->
+      @if (secundarios().length) {
+        <button class="mas" type="button" [class.activo]="masAbierto()" (click)="masAbierto.set(!masAbierto())" aria-label="Más opciones">
+          <span class="icono">☰</span>
+          <span>Más</span>
+        </button>
+      }
     </nav>
+
+    @if (masAbierto()) {
+      <div class="velo" (click)="masAbierto.set(false)"></div>
+      <div class="hoja-mas" role="menu">
+        @for (item of secundarios(); track item.ruta) {
+          <a [routerLink]="item.ruta" routerLinkActive="activo" role="menuitem">
+            <span class="icono">{{ item.icono }}</span>
+            <span>{{ item.texto }}</span>
+          </a>
+        }
+      </div>
+    }
 
     <main class="contenido">
       <router-outlet />

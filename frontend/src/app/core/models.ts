@@ -143,6 +143,11 @@ export interface OrdenTrabajo {
   mecanico?: Persona | null;
   repuestos?: OrdenRepuesto[];
   historial?: HistorialEstado[];
+  // Iteración 3
+  descuento: number;
+  manoObra?: ManoObra[];
+  pagos?: Pago[];
+  totales?: Totales;
   /** Tiene cambios hechos sin conexión aún no confirmados por el servidor. */
   _pendiente?: boolean;
 }
@@ -162,7 +167,112 @@ export interface Snapshot {
   repuestos: Repuesto[];
   ordenes: OrdenTrabajo[];
   personal: Persona[];
+  servicios: Servicio[];
+  taller: Taller | null;
 }
 
 export const formatoNumero = (n: number | null) =>
   n == null ? 'OT pendiente' : `OT-${String(n).padStart(4, '0')}`;
+
+// ---------------------------------------------------------------- Iteración 3
+
+export interface Totales {
+  repuestos: number;
+  manoObra: number;
+  subtotal: number;
+  descuento: number;
+  total: number;
+  pagado: number;
+  saldo: number;
+}
+
+export interface ManoObra {
+  id: string;
+  servicioId: string | null;
+  descripcion: string;
+  monto: number;
+  mecanicoId: string | null;
+  mecanico?: Persona | null;
+}
+
+export type MetodoPago = 'EFECTIVO' | 'QR' | 'TRANSFERENCIA' | 'TARJETA';
+
+export const METODOS_PAGO: { valor: MetodoPago; texto: string }[] = [
+  { valor: 'EFECTIVO', texto: 'Efectivo' },
+  { valor: 'QR', texto: 'QR' },
+  { valor: 'TRANSFERENCIA', texto: 'Transferencia' },
+  { valor: 'TARJETA', texto: 'Tarjeta' },
+];
+
+export interface Pago {
+  id: string;
+  monto: number;
+  metodo: MetodoPago;
+  referencia: string | null;
+  fecha: string;
+  anulado: boolean;
+  motivoAnulacion: string | null;
+  usuario?: { id: string; nombre: string };
+}
+
+export interface Servicio {
+  id: string;
+  nombre: string;
+  precio: number;
+  horasEstimadas: number | null;
+  activo: boolean;
+}
+
+export interface Taller {
+  id: string;
+  nombre: string;
+  direccion: string | null;
+  telefono: string | null;
+}
+
+export interface ResumenPeriodo {
+  ingresos: number;
+  cobros: number;
+  recibidas: number;
+  entregadas: number;
+  terminadas: number;
+  canceladas: number;
+  facturado: number;
+  ticketPromedio: number;
+  repuestos: number;
+  manoObra: number;
+  margenRepuestos: number;
+  horasReparacion: number | null;
+  horasEnTaller: number | null;
+  tasaReapertura: number;
+  cumplimiento: number;
+}
+
+export interface Dashboard {
+  periodo: { desde: string; hasta: string; dias: number; anteriorDesde: string; anteriorHasta: string };
+  resumen: ResumenPeriodo;
+  anterior: ResumenPeriodo;
+  ingresosPorDia: { dia: string; monto: number }[];
+  ingresosPorMetodo: { metodo: MetodoPago; cantidad: number; monto: number }[];
+  tiempoPorEtapa: { etapa: EstadoOrden; horas: number | null; ordenes: number }[];
+  abiertasPorEstado: Partial<Record<EstadoOrden, number>>;
+  topRepuestos: {
+    id: string;
+    codigo: string;
+    nombre: string;
+    unidad: string;
+    stock: number;
+    cantidad: number;
+    monto: number;
+    coberturaDias: number | null;
+  }[];
+  serviciosFrecuentes: { descripcion: string; veces: number; monto: number }[];
+  mecanicos: { id: string; nombre: string; terminadas: number; horasPromedio: number | null; manoObra: number }[];
+  marcas: { marca: string; ordenes: number }[];
+  inventario: { valor: number; total: number; bajoMinimo: number; sinMovimiento: number };
+  cuentasPorCobrar: {
+    monto: number;
+    ordenes: number;
+    detalle: { id: string; numero: number; estado: EstadoOrden; cliente: string; placa: string; saldo: number }[];
+  };
+}

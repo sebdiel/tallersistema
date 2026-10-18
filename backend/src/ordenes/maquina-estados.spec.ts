@@ -40,6 +40,18 @@ describe('Máquina de estados de la orden de trabajo', () => {
     expect(validarTransicion({ ...o, sinRepuestos: true }, E.TERMINADO)).toBeNull();
   });
 
+  it('RN-18: no se entrega con saldo, salvo crédito del admin con comentario', () => {
+    const t = orden({ estado: E.TERMINADO, diagnostico: 'x', saldo: 150 });
+    expect(validarTransicion(t, E.ENTREGADO)).toMatch(/saldo pendiente de Bs 150.00/);
+    expect(validarTransicion({ ...t, esAdmin: true }, E.ENTREGADO)).toMatch(/crédito/);
+    expect(validarTransicion({ ...t, esAdmin: true }, E.ENTREGADO, 'Paga el viernes')).toBeNull();
+    expect(validarTransicion({ ...t, saldo: 0 }, E.ENTREGADO)).toBeNull();
+  });
+
+  it('RN-19: no se cancela una OT con pagos vigentes', () => {
+    expect(validarTransicion(orden({ pagado: 50 }), E.CANCELADO, 'x')).toMatch(/pagos/);
+  });
+
   it('exige motivo para cancelar y para reabrir', () => {
     expect(validarTransicion(orden(), E.CANCELADO)).toMatch(/motivo/);
     expect(validarTransicion(orden(), E.CANCELADO, 'Cliente desistió')).toBeNull();

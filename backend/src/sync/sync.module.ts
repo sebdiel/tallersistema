@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientesModule } from '../clientes/clientes.module';
 import { OrdenesModule } from '../ordenes/ordenes.module';
 import { RepuestosModule } from '../repuestos/repuestos.module';
+import { Servicio } from '../servicios/servicio.entity';
+import { Taller } from '../talleres/taller.entity';
 import { Usuario } from '../usuarios/usuario.entity';
 import { VehiculosModule } from '../vehiculos/vehiculos.module';
 import { SyncController } from './sync.controller';
@@ -11,7 +13,7 @@ import { SyncService } from './sync.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SyncOperacion, Usuario]),
+    TypeOrmModule.forFeature([SyncOperacion, Usuario, Servicio, Taller]),
     ClientesModule,
     VehiculosModule,
     OrdenesModule,

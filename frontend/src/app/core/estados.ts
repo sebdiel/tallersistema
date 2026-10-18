@@ -45,6 +45,9 @@ export const ACCION_ESTADO: Record<EstadoOrden, string> = {
 export function validarTransicion(
   orden: Pick<OrdenTrabajo, 'estado' | 'diagnostico' | 'mecanicoId' | 'sinRepuestos'> & {
     totalRepuestos: number;
+    saldo?: number;
+    pagado?: number;
+    esAdmin?: boolean;
   },
   destino: EstadoOrden,
   comentario?: string | null,
@@ -66,6 +69,18 @@ export function validarTransicion(
       break;
     case 'CANCELADO':
       if (!comentario?.trim()) return 'Indique el motivo de la cancelación';
+      if ((orden.pagado ?? 0) > 0) return 'La orden tiene pagos registrados. Anúlelos antes de cancelar';
+      break;
+    case 'ENTREGADO':
+      if ((orden.saldo ?? 0) > 0) {
+        const saldo = (orden.saldo ?? 0).toFixed(2);
+        if (!orden.esAdmin) {
+          return `El cliente tiene un saldo pendiente de Bs ${saldo}. Registre el pago antes de entregar`;
+        }
+        if (!comentario?.trim()) {
+          return `Saldo pendiente de Bs ${saldo}: para entregar a crédito indique un comentario`;
+        }
+      }
       break;
   }
   if (orden.estado === 'TERMINADO' && destino === 'EN_REPARACION' && !comentario?.trim()) {

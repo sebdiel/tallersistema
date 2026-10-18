@@ -82,7 +82,7 @@ export class SyncService {
     const s = await firstValueFrom(this.api.snapshot());
     await db.transaction(
       'rw',
-      [db.clientes, db.vehiculos, db.repuestos, db.ordenes, db.personal, db.meta],
+      [db.clientes, db.vehiculos, db.repuestos, db.ordenes, db.personal, db.servicios, db.meta],
       async () => {
         await Promise.all([
           db.clientes.clear(),
@@ -90,6 +90,7 @@ export class SyncService {
           db.repuestos.clear(),
           db.ordenes.clear(),
           db.personal.clear(),
+          db.servicios.clear(),
         ]);
         await Promise.all([
           db.clientes.bulkPut(s.clientes),
@@ -97,7 +98,9 @@ export class SyncService {
           db.repuestos.bulkPut(s.repuestos),
           db.ordenes.bulkPut(s.ordenes),
           db.personal.bulkPut(s.personal),
+          db.servicios.bulkPut(s.servicios),
           db.meta.put({ clave: 'ultimaSync', valor: s.generadoEn }),
+          db.meta.put({ clave: 'taller', valor: JSON.stringify(s.taller) }),
         ]);
       },
     );
@@ -125,6 +128,7 @@ export class SyncService {
       db.repuestos.clear(),
       db.ordenes.clear(),
       db.personal.clear(),
+      db.servicios.clear(),
       db.meta.clear(),
     ]);
     this.ultimaSync.set(null);

@@ -9,12 +9,15 @@ import {
 } from 'typeorm';
 import { Cliente } from '../clientes/cliente.entity';
 import { BaseEntity } from '../common/entities/base.entity';
+import { numeric } from '../common/utils/numeric.transformer';
 import { Taller } from '../talleres/taller.entity';
 import { Usuario } from '../usuarios/usuario.entity';
 import { Vehiculo } from '../vehiculos/vehiculo.entity';
 import { HistorialEstado } from './historial-estado.entity';
 import { EstadoOrden } from './maquina-estados';
+import { OrdenManoObra } from './orden-mano-obra.entity';
 import { OrdenRepuesto } from './orden-repuesto.entity';
+import { Pago } from './pago.entity';
 
 /** Orden de trabajo (OT): ciclo de vida del servicio vehicular (HU-09). */
 @Entity('ordenes_trabajo')
@@ -88,6 +91,16 @@ export class OrdenTrabajo extends BaseEntity {
 
   @Column({ name: 'fecha_entrega', type: 'timestamptz', nullable: true })
   fechaEntrega: Date | null;
+
+  /** RN-16: descuento en Bs, solo lo aplica el administrador. */
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, transformer: numeric })
+  descuento: number;
+
+  @OneToMany(() => OrdenManoObra, (m) => m.orden)
+  manoObra: OrdenManoObra[];
+
+  @OneToMany(() => Pago, (p) => p.orden)
+  pagos: Pago[];
 
   @OneToMany(() => OrdenRepuesto, (r) => r.orden)
   repuestos: OrdenRepuesto[];

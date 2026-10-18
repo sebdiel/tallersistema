@@ -1,0 +1,231 @@
+<div class="pagina">
+  <div class="encabezado">
+    <h1>Indicadores del taller</h1>
+  </div>
+
+  <!-- HU-24: filtros de período (una sola fila sobre las gráficas) -->
+  <div class="filtros-periodo">
+    <div class="filtros" style="margin: 0">
+      @for (p of presets; track p.valor) {
+        <button [class.activo]="preset() === p.valor" (click)="aplicarPreset(p.valor)">{{ p.texto }}</button>
+      }
+    </div>
+    <div class="rango">
+      <input type="date" [(ngModel)]="desde" (change)="rangoPersonalizado()" aria-label="Desde" />
+      <span>a</span>
+      <input type="date" [(ngModel)]="hasta" (change)="rangoPersonalizado()" aria-label="Hasta" />
+    </div>
+  </div>
+
+  @if (!conexion.enLinea()) {
+    <div class="alerta alerta-warn">Los indicadores se calculan en el servidor: se necesita conexión.</div>
+  }
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (datos(); as d) {
+    <p class="item-sub periodo" [style.opacity]="cargando() ? 0.5 : 1">
+      Del {{ d.periodo.desde | date: 'dd/MM/yyyy' }} al {{ d.periodo.hasta | date: 'dd/MM/yyyy' }}
+      ({{ d.periodo.dias }} días) · comparado con {{ d.periodo.anteriorDesde | date: 'dd/MM' }}–{{ d.periodo.anteriorHasta | date: 'dd/MM' }}
+    </p>
+
+    <!-- HU-22: fila de indicadores -->
+    <div class="kpis" [style.opacity]="cargando() ? 0.5 : 1">
+      @for (i of indicadores(); track i.titulo) {
+        <div class="card kpi">
+          <div class="kpi-titulo">{{ i.titulo }}</div>
+          <div class="kpi-valor">{{ i.valor }}</div>
+          <div class="kpi-delta" [class]="'kpi-delta ' + claseDelta(i)">
+            @if (i.delta == null) {
+              Sin datos del período anterior
+            } @else {
+              {{ i.delta > 0 ? '▲' : i.delta < 0 ? '▼' : '■' }}
+              {{ i.delta > 0 ? '+' : '' }}{{ i.delta | number: '1.0-0' }} % vs. anterior
+            }
+          </div>
+          <div class="kpi-ayuda">{{ i.ayuda }}</div>
+        </div>
+      }
+    </div>
+
+    <div class="rejilla">
+      <!-- Ingresos por día -->
+      <section class="card ancho">
+        <h2>Ingresos cobrados por día (Bs)</h2>
+        <div class="grafica">
+          <canvas baseChart type="bar" [data]="graficaIngresos()" [options]="opcionesBs" aria-label="Ingresos cobrados por día"></canvas>
+        </div>
+        <details>
+          <summary>Ver datos en tabla</summary>
+          <table class="tabla">
+            <thead><tr><th>Día</th><th class="num">Ingresos (Bs)</th></tr></thead>
+            <tbody>
+              @for (x of d.ingresosPorDia; track x.dia) {
+                @if (x.monto > 0) {
+                  <tr><td>{{ x.dia | date: 'EEE dd/MM' }}</td><td class="num">{{ x.monto | number: '1.2-2' }}</td></tr>
+                }
+              }
+            </tbody>
+          </table>
+        </details>
+        @if (d.ingresosPorMetodo.length) {
+          <div class="metodos">
+            @for (m of d.ingresosPorMetodo; track m.metodo) {
+              <span class="etiqueta">{{ metodoTexto[m.metodo] }}: {{ bs(m.monto) }} ({{ m.cantidad }})</span>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Tiempo por etapa -->
+      <section class="card">
+        <h2>Tiempo promedio en cada etapa</h2>
+        @if (etapasOrdenadas().length) {
+          <div class="grafica corta">
+            <canvas baseChart type="bar" [data]="graficaEtapas()" [options]="opcionesHoras" aria-label="Tiempo promedio por etapa"></canvas>
+          </div>
+          <details>
+            <summary>Ver datos en tabla</summary>
+            <table class="tabla">
+              <thead><tr><th>Etapa</th><th class="num">Promedio</th><th class="num">OT</th></tr></thead>
+              <tbody>
+                @for (e of etapasOrdenadas(); track e.etapa) {
+                  <tr><td>{{ etapas[e.etapa] }}</td><td class="num">{{ horas(e.horas ?? 0) }}</td><td class="num">{{ e.ordenes }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </details>
+          <p class="item-sub">Identifica el cuello de botella: la etapa más larga es donde se acumulan los vehículos.</p>
+        } @else {
+          <p class="vacio">Sin cambios de estado en el período.</p>
+        }
+      </section>
+
+      <!-- OT abiertas ahora -->
+      <section class="card">
+        <h2>Vehículos en el taller ahora</h2>
+        <div class="abiertas">
+          @for (e of abiertos; track e) {
+            <a class="abierta" routerLink="/ordenes">
+              <span class="cifra">{{ d.abiertasPorEstado[e] ?? 0 }}</span>
+              <span [class]="'estado-ot ' + info[e].clase">{{ info[e].texto }}</span>
+            </a>
+          }
+        </div>
+      </section>
+
+      <!-- HU-23: repuestos -->
+      <section class="card ancho">
+        <h2>Repuestos más vendidos (Bs)</h2>
+        @if (d.topRepuestos.length) {
+          <div class="grafica" [style.height.px]="40 + d.topRepuestos.length * 34">
+            <canvas baseChart type="bar" [data]="graficaRepuestos()" [options]="opcionesBsHorizontal" aria-label="Repuestos más vendidos"></canvas>
+          </div>
+          <table class="tabla">
+            <thead>
+              <tr><th>Repuesto</th><th class="num">Usado</th><th class="num">Stock</th><th class="num">Alcanza para</th></tr>
+            </thead>
+            <tbody>
+              @for (r of d.topRepuestos; track r.id) {
+                <tr>
+                  <td><a [routerLink]="['/inventario', r.id]">{{ r.nombre }}</a></td>
+                  <td class="num">{{ r.cantidad | number }} {{ r.unidad.toLowerCase() }}</td>
+                  <td class="num">{{ r.stock | number }}</td>
+                  <td class="num" [class.stock-bajo]="r.coberturaDias != null && r.coberturaDias < 7">
+                    {{ r.coberturaDias == null ? '—' : r.coberturaDias + ' días' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p class="item-sub">"Alcanza para": días que dura el stock actual al ritmo de consumo del período.</p>
+        } @else {
+          <p class="vacio">No se usaron repuestos en el período.</p>
+        }
+      </section>
+
+      <!-- Inventario -->
+      <section class="card">
+        <h2>Inventario</h2>
+        <dl class="datos">
+          <dt>Valor (a precio de compra)</dt>
+          <dd class="num">{{ bs(d.inventario.valor) }}</dd>
+          <dt>Repuestos activos</dt>
+          <dd class="num">{{ d.inventario.total }}</dd>
+          <dt>Bajo stock mínimo</dt>
+          <dd class="num" [class.stock-bajo]="d.inventario.bajoMinimo > 0">{{ d.inventario.bajoMinimo }}</dd>
+          <dt>Sin salida en el período</dt>
+          <dd class="num">{{ d.inventario.sinMovimiento }}</dd>
+        </dl>
+        <p class="item-sub">Los repuestos sin salida inmovilizan dinero: conviene no reponerlos.</p>
+      </section>
+
+      <!-- Cuentas por cobrar -->
+      <section class="card">
+        <h2>Cuentas por cobrar</h2>
+        <div class="kpi-valor" [class.stock-bajo]="d.cuentasPorCobrar.monto > 0">{{ bs(d.cuentasPorCobrar.monto) }}</div>
+        <div class="item-sub">{{ d.cuentasPorCobrar.ordenes }} orden(es) con saldo</div>
+        <ul class="lista" style="margin-top: 8px">
+          @for (c of d.cuentasPorCobrar.detalle; track c.id) {
+            <li>
+              <a class="fila" [routerLink]="['/ordenes', c.id]">
+                <span>{{ numero(c.numero) }} · {{ c.placa }} · {{ c.cliente }}</span>
+                <strong class="num">{{ c.saldo | number: '1.2-2' }}</strong>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <!-- Servicios frecuentes -->
+      <section class="card">
+        <h2>Servicios más frecuentes</h2>
+        <table class="tabla">
+          <thead><tr><th>Servicio</th><th class="num">Veces</th><th class="num">Bs</th></tr></thead>
+          <tbody>
+            @for (s of d.serviciosFrecuentes; track s.descripcion) {
+              <tr><td>{{ s.descripcion }}</td><td class="num">{{ s.veces }}</td><td class="num">{{ s.monto | number: '1.2-2' }}</td></tr>
+            } @empty {
+              <tr><td colspan="3" class="vacio">Sin mano de obra en el período.</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Productividad -->
+      <section class="card">
+        <h2>Productividad por mecánico</h2>
+        <table class="tabla">
+          <thead><tr><th>Mecánico</th><th class="num">OT term.</th><th class="num">Prom.</th><th class="num">M. obra Bs</th></tr></thead>
+          <tbody>
+            @for (m of d.mecanicos; track m.id) {
+              <tr>
+                <td>{{ m.nombre }}</td>
+                <td class="num">{{ m.terminadas }}</td>
+                <td class="num">{{ m.horasPromedio == null ? '—' : horas(m.horasPromedio) }}</td>
+                <td class="num">{{ m.manoObra | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Marcas -->
+      <section class="card">
+        <h2>Marcas más atendidas</h2>
+        <table class="tabla">
+          <tbody>
+            @for (m of d.marcas; track m.marca) {
+              <tr><td>{{ m.marca }}</td><td class="num">{{ m.ordenes }} OT</td></tr>
+            } @empty {
+              <tr><td class="vacio">Sin ingresos de vehículos en el período.</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    </div>
+  } @else if (cargando()) {
+    <p class="vacio">Calculando indicadores…</p>
+  }
+</div>

@@ -12,11 +12,15 @@ import {
 import { CurrentUser, Roles, UsuarioActual } from '../common/decorators/auth.decorators';
 import { Rol } from '../common/enums/rol.enum';
 import {
+  AgregarManoObraDto,
   AgregarRepuestoDto,
+  AnularPagoDto,
   AsignarMecanicoDto,
   CambiarEstadoDto,
   CreateOrdenDto,
+  DescuentoDto,
   FiltroOrdenesDto,
+  RegistrarPagoDto,
   UpdateOrdenDto,
 } from './dto/orden.dto';
 import { OrdenesService } from './ordenes.service';
@@ -90,5 +94,55 @@ export class OrdenesController {
     @Param('lineaId', ParseUUIDPipe) lineaId: string,
   ) {
     return this.service.quitarRepuesto(user, id, lineaId);
+  }
+
+  // ---------------------------------------------------------------- Iteración 3
+
+  @Post(':id/mano-obra')
+  agregarManoObra(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AgregarManoObraDto,
+  ) {
+    return this.service.agregarManoObra(user, id, dto);
+  }
+
+  @Delete(':id/mano-obra/:lineaId')
+  quitarManoObra(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('lineaId', ParseUUIDPipe) lineaId: string,
+  ) {
+    return this.service.quitarManoObra(user, id, lineaId);
+  }
+
+  @Patch(':id/descuento')
+  @Roles(Rol.ADMIN)
+  aplicarDescuento(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DescuentoDto,
+  ) {
+    return this.service.aplicarDescuento(user, id, dto);
+  }
+
+  @Post(':id/pagos')
+  registrarPago(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RegistrarPagoDto,
+  ) {
+    return this.service.registrarPago(user, id, dto);
+  }
+
+  @Post(':id/pagos/:pagoId/anular')
+  @Roles(Rol.ADMIN)
+  anularPago(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('pagoId', ParseUUIDPipe) pagoId: string,
+    @Body() dto: AnularPagoDto,
+  ) {
+    return this.service.anularPago(user, id, pagoId, dto);
   }
 }

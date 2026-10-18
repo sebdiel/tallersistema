@@ -18,6 +18,12 @@ export const TIPOS_OPERACION = [
   'orden.estado',
   'orden.repuesto.agregar',
   'orden.repuesto.quitar',
+  // Iteración 3
+  'orden.manoobra.agregar',
+  'orden.manoobra.quitar',
+  'orden.descuento',
+  'orden.pago.registrar',
+  'orden.pago.anular',
 ] as const;
 
 export type TipoOperacion = (typeof TIPOS_OPERACION)[number];

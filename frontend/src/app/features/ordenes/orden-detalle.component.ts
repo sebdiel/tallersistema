@@ -5,18 +5,25 @@ import { RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/auth.interceptor';
 import { AuthService } from '../../core/auth.service';
 import { DatosService } from '../../core/datos.service';
+import { calcularTotales } from '../../core/costos';
 import {
   ACCION_ESTADO,
+  ESTADOS_ABIERTOS,
   ESTADOS_CON_REPUESTOS,
   ESTADO_INFO,
   TRANSICIONES,
 } from '../../core/estados';
 import {
   EstadoOrden,
+  METODOS_PAGO,
+  ManoObra,
+  MetodoPago,
   OrdenRepuesto,
   OrdenTrabajo,
+  Pago,
   Persona,
   Repuesto,
+  Servicio,
   formatoNumero,
 } from '../../core/models';
 
@@ -47,6 +54,23 @@ import {
     textarea {
       width: 100%;
     }
+    .descuento {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .descuento input {
+      width: 90px;
+      min-height: 36px;
+      padding: 4px 8px;
+      border: 1px solid var(--borde);
+      border-radius: 6px;
+      font: inherit;
+    }
+    .descuento button {
+      min-height: 34px;
+      padding: 0 10px;
+    }
   `,
 })
 export class OrdenDetalleComponent implements OnInit {
@@ -62,6 +86,8 @@ export class OrdenDetalleComponent implements OnInit {
   readonly orden = signal<OrdenTrabajo | null>(null);
   readonly personal = signal<Persona[]>([]);
   readonly repuestos = signal<Repuesto[]>([]);
+  readonly servicios = signal<Servicio[]>([]);
+  readonly metodos = METODOS_PAGO;
   readonly error = signal<string | null>(null);
   readonly aviso = signal<string | null>(null);
   readonly procesando = signal(false);
@@ -73,6 +99,12 @@ export class OrdenDetalleComponent implements OnInit {
   repuestoId = '';
   cantidad = 1;
   filtroRepuesto = '';
+  // Iteración 3
+  mo = { servicioId: '', descripcion: '', monto: null as number | null };
+  descuento: number | null = null;
+  pago = { monto: null as number | null, metodo: 'EFECTIVO' as MetodoPago, referencia: '' };
+  readonly anulando = signal<Pago | null>(null);
+  motivoAnulacion = '';
 
   readonly siguientes = computed(() => {
     const o = this.orden();
@@ -86,9 +118,14 @@ export class OrdenDetalleComponent implements OnInit {
     const e = this.orden()?.estado;
     return !!e && ESTADOS_CON_REPUESTOS.includes(e);
   });
-  readonly totalRepuestos = computed(() =>
-    (this.orden()?.repuestos ?? []).reduce((s, l) => s + l.cantidad * l.precioUnitario, 0),
-  );
+  readonly totales = computed(() => {
+    const o = this.orden();
+    return o ? (o.totales ?? calcularTotales(o)) : null;
+  });
+  readonly costosEditables = computed(() => {
+    const e = this.orden()?.estado;
+    return !!e && ESTADOS_ABIERTOS.includes(e);
+  });
   repuestoElegido() {
     return this.repuestos().find((r) => r.id === this.repuestoId);
   }
@@ -98,6 +135,7 @@ export class OrdenDetalleComponent implements OnInit {
       this.mostrar(await this.datos.obtenerOrden(this.id()));
       this.personal.set(await this.datos.personal());
       this.repuestos.set(await this.datos.buscarRepuestos());
+      this.servicios.set(await this.datos.servicios());
     } catch (err) {
       this.error.set(mensajeError(err));
     }
@@ -108,7 +146,10 @@ export class OrdenDetalleComponent implements OnInit {
   cambiarEstado(destino: EstadoOrden) {
     const o = this.orden()!;
     const requiereMotivo =
-      destino === 'CANCELADO' || (o.estado === 'TERMINADO' && destino === 'EN_REPARACION');
+      destino === 'CANCELADO' ||
+      (o.estado === 'TERMINADO' && destino === 'EN_REPARACION') ||
+      // RN-18: entregar a crédito (solo admin) exige comentario.
+      (destino === 'ENTREGADO' && (this.totales()?.saldo ?? 0) > 0 && this.auth.tieneRol('ADMIN'));
     if (requiereMotivo && this.confirmando() !== destino) {
       this.confirmando.set(destino);
       this.comentario = '';
@@ -151,6 +192,54 @@ export class OrdenDetalleComponent implements OnInit {
     this.repuestos.set(await this.datos.buscarRepuestos(this.filtroRepuesto));
   }
 
+  // ------------------------------------------------------ costos y pagos
+
+  elegirServicio(id: string) {
+    const s = this.servicios().find((x) => x.id === id);
+    this.mo = { servicioId: id, descripcion: s?.nombre ?? '', monto: s?.precio ?? null };
+  }
+
+  async agregarManoObra() {
+    await this.ejecutar(() =>
+      this.datos.agregarManoObra(this.orden()!, {
+        servicioId: this.mo.servicioId || null,
+        descripcion: this.mo.descripcion,
+        monto: Number(this.mo.monto),
+      }),
+    );
+    if (!this.error()) this.mo = { servicioId: '', descripcion: '', monto: null };
+  }
+
+  quitarManoObra(linea: ManoObra) {
+    if (!confirm(`¿Quitar "${linea.descripcion}"?`)) return;
+    this.ejecutar(() => this.datos.quitarManoObra(this.orden()!, linea));
+  }
+
+  aplicarDescuento() {
+    this.ejecutar(() => this.datos.aplicarDescuento(this.orden()!, Number(this.descuento ?? 0)));
+  }
+
+  async registrarPago() {
+    await this.ejecutar(() =>
+      this.datos.registrarPago(this.orden()!, {
+        monto: Number(this.pago.monto),
+        metodo: this.pago.metodo,
+        referencia: this.pago.referencia,
+      }),
+    );
+    if (!this.error()) this.pago = { monto: null, metodo: 'EFECTIVO', referencia: '' };
+  }
+
+  async confirmarAnulacion() {
+    await this.ejecutar(() =>
+      this.datos.anularPago(this.orden()!, this.anulando()!, this.motivoAnulacion),
+    );
+    if (!this.error()) {
+      this.anulando.set(null);
+      this.motivoAnulacion = '';
+    }
+  }
+
   // ---------------------------------------------------------------- auxiliares
 
   private async ejecutar(accion: () => Promise<OrdenTrabajo>) {
@@ -177,5 +266,6 @@ export class OrdenDetalleComponent implements OnInit {
   private mostrar(o: OrdenTrabajo) {
     this.orden.set(o);
     this.diagnostico = o.diagnostico ?? '';
+    this.descuento = o.descuento ?? 0;
   }
 }

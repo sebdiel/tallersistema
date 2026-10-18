@@ -15,12 +15,18 @@ import { UsuarioActual } from '../common/decorators/auth.decorators';
 import { Rol } from '../common/enums/rol.enum';
 import { tallerDe } from '../common/utils/taller.util';
 import {
+  AgregarManoObraDto,
   AgregarRepuestoDto,
+  AnularPagoDto,
   AsignarMecanicoDto,
   CambiarEstadoDto,
   CreateOrdenDto,
+  DescuentoDto,
+  RegistrarPagoDto,
   UpdateOrdenDto,
 } from '../ordenes/dto/orden.dto';
+import { Servicio } from '../servicios/servicio.entity';
+import { Taller } from '../talleres/taller.entity';
 import { OrdenesService } from '../ordenes/ordenes.service';
 import { RepuestosService } from '../repuestos/repuestos.service';
 import { Usuario } from '../usuarios/usuario.entity';
@@ -37,6 +43,8 @@ export class SyncService {
   constructor(
     @InjectRepository(SyncOperacion) private readonly registro: Repository<SyncOperacion>,
     @InjectRepository(Usuario) private readonly usuarios: Repository<Usuario>,
+    @InjectRepository(Servicio) private readonly servicios: Repository<Servicio>,
+    @InjectRepository(Taller) private readonly talleres: Repository<Taller>,
     private readonly clientes: ClientesService,
     private readonly vehiculos: VehiculosService,
     private readonly ordenes: OrdenesService,
@@ -83,7 +91,7 @@ export class SyncService {
    */
   async snapshot(user: UsuarioActual) {
     const tallerId = tallerDe(user);
-    const [clientes, vehiculos, repuestos, abiertas, recientes, personal] = await Promise.all([
+    const [clientes, vehiculos, repuestos, abiertas, recientes, personal, servicios, taller] = await Promise.all([
       this.clientes.buscar(user, undefined, false, 10_000),
       this.vehiculos.buscar(user, undefined, 10_000),
       this.repuestos.buscar(user),
@@ -94,9 +102,20 @@ export class SyncService {
         select: { id: true, nombre: true, rol: true },
         order: { nombre: 'ASC' },
       }),
+      this.servicios.find({ where: { tallerId, activo: true }, order: { nombre: 'ASC' } }),
+      this.talleres.findOneBy({ id: tallerId }),
     ]);
     const ordenes = [...new Map([...recientes, ...abiertas].map((o) => [o.id, o])).values()];
-    return { generadoEn: new Date(), clientes, vehiculos, repuestos, ordenes, personal };
+    return {
+      generadoEn: new Date(),
+      clientes,
+      vehiculos,
+      repuestos,
+      ordenes,
+      personal,
+      servicios,
+      taller,
+    };
   }
 
   private async ejecutar(user: UsuarioActual, op: OperacionDto) {
@@ -121,12 +140,41 @@ export class SyncService {
         return this.ordenes.cambiarEstado(user, ref(), await validar(CambiarEstadoDto, op.datos));
       case 'orden.repuesto.agregar':
         return this.ordenes.agregarRepuesto(user, ref(), await validar(AgregarRepuestoDto, op.datos));
+      case 'orden.manoobra.agregar':
+        return this.ordenes.agregarManoObra(user, ref(), await validar(AgregarManoObraDto, op.datos));
+      case 'orden.manoobra.quitar':
+        return this.ordenes.quitarManoObra(user, ref(), this.idDe(op, 'lineaId'));
+      case 'orden.descuento':
+        this.soloAdmin(user, 'aplica descuentos');
+        return this.ordenes.aplicarDescuento(user, ref(), await validar(DescuentoDto, op.datos));
+      case 'orden.pago.registrar':
+        return this.ordenes.registrarPago(user, ref(), await validar(RegistrarPagoDto, op.datos));
+      case 'orden.pago.anular': {
+        this.soloAdmin(user, 'anula pagos');
+        const { pagoId, ...resto } = op.datos;
+        return this.ordenes.anularPago(
+          user,
+          ref(),
+          this.idDe(op, 'pagoId'),
+          await validar(AnularPagoDto, resto),
+        );
+      }
       case 'orden.repuesto.quitar': {
         const lineaId = op.datos['lineaId'];
         if (typeof lineaId !== 'string') throw new BadRequestException('Falta lineaId');
         return this.ordenes.quitarRepuesto(user, ref(), lineaId);
       }
     }
+  }
+
+  private soloAdmin(user: UsuarioActual, accion: string) {
+    if (user.rol !== Rol.ADMIN) throw new ForbiddenException(`Solo el administrador ${accion}`);
+  }
+
+  private idDe(op: OperacionDto, campo: string): string {
+    const v = op.datos[campo];
+    if (typeof v !== 'string') throw new BadRequestException(`Falta ${campo}`);
+    return v;
   }
 
   private guardar(user: UsuarioActual, op: OperacionDto, ok: boolean, error: string | null) {

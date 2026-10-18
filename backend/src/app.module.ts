@@ -13,6 +13,8 @@ import { OrdenesModule } from './ordenes/ordenes.module';
 import { ReglasModule } from './reglas/reglas.module';
 import { RepuestosModule } from './repuestos/repuestos.module';
 import { SyncModule } from './sync/sync.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { ServiciosModule } from './servicios/servicios.module';
 import { Taller } from './talleres/taller.entity';
 import { TalleresModule } from './talleres/talleres.module';
 import { Usuario } from './usuarios/usuario.entity';
@@ -49,6 +51,9 @@ import { VehiculosModule } from './vehiculos/vehiculos.module';
     OrdenesModule,
     ReglasModule,
     SyncModule,
+    // Iteración 3
+    ServiciosModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

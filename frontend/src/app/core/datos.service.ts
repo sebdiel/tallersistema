@@ -3,6 +3,7 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { FiltroOrdenes, OrdenesApi, RepuestosApi, VehiculosApi } from './api.service';
 import { AuthService } from './auth.service';
 import { ConexionService, esSinConexion } from './conexion.service';
+import { calcularTotales } from './costos';
 import { OperacionPendiente, db } from './db';
 import {
   ESTADOS_ABIERTOS,
@@ -12,9 +13,14 @@ import {
 import {
   Cliente,
   EstadoOrden,
+  ManoObra,
+  MetodoPago,
   OrdenRepuesto,
   OrdenTrabajo,
+  Pago,
   Repuesto,
+  Servicio,
+  Taller,
   Vehiculo,
   formatoNumero,
 } from './models';
@@ -37,6 +43,9 @@ export interface NuevaOrden {
 const uuid = () => crypto.randomUUID();
 const normalizarPlaca = (p: string) => p.toUpperCase().replace(/[\s-]/g, '');
 const ahora = () => new Date().toISOString();
+
+/** RN-15: la copia local siempre lleva sus totales recalculados. */
+const recalcular = (o: OrdenTrabajo): OrdenTrabajo => ({ ...o, totales: calcularTotales(o) });
 
 /**
  * Acceso a datos con soporte offline (Local-First) para órdenes de trabajo,
@@ -142,6 +151,17 @@ export class DatosService {
         );
       },
     );
+  }
+
+  /** Catálogo de servicios (copia local, sirve sin conexión). */
+  servicios(): Promise<Servicio[]> {
+    return db.servicios.orderBy('nombre').toArray();
+  }
+
+  /** Datos del taller para el comprobante. */
+  async taller(): Promise<Taller | null> {
+    const m = await db.meta.get('taller');
+    return m ? JSON.parse(m.valor) : null;
   }
 
   /** Personal activo del taller (para asignar mecánico). */
@@ -256,6 +276,9 @@ export class DatosService {
       diagnostico: null,
       kilometrajeIngreso: d.kilometrajeIngreso,
       sinRepuestos: false,
+      descuento: 0,
+      manoObra: [],
+      pagos: [],
       fechaIngreso: fecha,
       fechaTerminado: null,
       fechaEntrega: null,
@@ -284,7 +307,7 @@ export class DatosService {
     return this.ejecutar(ops, orden.id, [], async () => {
       if (cliente && d.nuevoCliente) await db.clientes.put(cliente);
       await db.vehiculos.put({ ...vehiculo!, kilometraje: d.kilometrajeIngreso });
-      await db.ordenes.put(orden);
+      await db.ordenes.put(recalcular(orden));
     });
   }
 
@@ -298,8 +321,15 @@ export class DatosService {
       orden.mecanico = { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol };
     }
     this.verificarPermiso(orden);
+    const t = calcularTotales(orden);
     const error = validarTransicion(
-      { ...orden, totalRepuestos: orden.repuestos?.length ?? 0 },
+      {
+        ...orden,
+        totalRepuestos: orden.repuestos?.length ?? 0,
+        saldo: t.saldo,
+        pagado: t.pagado,
+        esAdmin: usuario.rol === 'ADMIN',
+      },
       destino,
       comentario,
     );
@@ -333,7 +363,7 @@ export class DatosService {
       async () => {
         // RN-14: al cancelar, los repuestos vuelven al stock local.
         for (const l of devueltos) await this.moverStockLocal(l.repuestoId, l.cantidad);
-        await db.ordenes.put(orden);
+        await db.ordenes.put(recalcular(orden));
       },
     );
   }
@@ -365,7 +395,7 @@ export class DatosService {
       ],
       o.id,
       [],
-      () => db.ordenes.put(orden),
+      () => db.ordenes.put(recalcular(orden)),
     );
   }
 
@@ -389,7 +419,7 @@ export class DatosService {
       ],
       o.id,
       [],
-      () => db.ordenes.put(orden),
+      () => db.ordenes.put(recalcular(orden)),
     );
   }
 
@@ -433,7 +463,7 @@ export class DatosService {
       [repuestoId],
       async () => {
         await this.moverStockLocal(repuestoId, -cantidad);
-        await db.ordenes.put(orden);
+        await db.ordenes.put(recalcular(orden));
       },
     );
   }
@@ -441,6 +471,7 @@ export class DatosService {
   async quitarRepuesto(o: OrdenTrabajo, linea: OrdenRepuesto) {
     this.verificarPermiso(o);
     this.verificarEstadoRepuestos(o);
+    this.verificarTotalCubrePagos(o, linea.cantidad * linea.precioUnitario);
     const orden = structuredClone(o);
     orden.repuestos = (orden.repuestos ?? []).filter((l) => l.id !== linea.id);
     orden._pendiente = true;
@@ -459,12 +490,202 @@ export class DatosService {
       [linea.repuestoId],
       async () => {
         await this.moverStockLocal(linea.repuestoId, linea.cantidad);
-        await db.ordenes.put(orden);
+        await db.ordenes.put(recalcular(orden));
       },
     );
   }
 
+  // ======================================================= costos y pagos
+
+  /** HU-18: mano de obra (del catálogo o libre). */
+  async agregarManoObra(
+    o: OrdenTrabajo,
+    d: { servicioId?: string | null; descripcion: string; monto: number },
+  ) {
+    this.verificarPermiso(o);
+    this.verificarEstadoCostos(o);
+    if (d.descripcion.trim().length < 3) throw new Error('Describa el trabajo realizado');
+    if (!(d.monto >= 0)) throw new Error('Indique el monto de la mano de obra');
+
+    const linea: ManoObra = {
+      id: uuid(),
+      servicioId: d.servicioId ?? null,
+      descripcion: d.descripcion.trim(),
+      monto: d.monto,
+      mecanicoId: o.mecanicoId,
+      mecanico: o.mecanico ?? null,
+    };
+    const orden = structuredClone(o);
+    orden.manoObra = [...(orden.manoObra ?? []), linea];
+    orden._pendiente = true;
+
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.manoobra.agregar',
+          ref: o.id,
+          datos: {
+            id: linea.id,
+            servicioId: linea.servicioId,
+            descripcion: linea.descripcion,
+            monto: linea.monto,
+          },
+          descripcion: `Mano de obra "${linea.descripcion}" en ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  async quitarManoObra(o: OrdenTrabajo, linea: ManoObra) {
+    this.verificarPermiso(o);
+    this.verificarEstadoCostos(o);
+    this.verificarTotalCubrePagos(o, linea.monto);
+    const orden = structuredClone(o);
+    orden.manoObra = (orden.manoObra ?? []).filter((l) => l.id !== linea.id);
+    orden._pendiente = true;
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.manoobra.quitar',
+          ref: o.id,
+          datos: { lineaId: linea.id },
+          descripcion: `Quitar "${linea.descripcion}" de ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  /** RN-16 (solo administrador). */
+  async aplicarDescuento(o: OrdenTrabajo, descuento: number) {
+    this.verificarEstadoCostos(o);
+    const t = calcularTotales(o);
+    if (!(descuento >= 0)) throw new Error('Descuento inválido');
+    if (descuento > t.subtotal) {
+      throw new Error(`El descuento no puede superar el subtotal (Bs ${t.subtotal.toFixed(2)})`);
+    }
+    if (t.subtotal - descuento < t.pagado - 0.001) {
+      throw new Error(
+        `Con ese descuento el total quedaría por debajo de lo ya pagado (Bs ${t.pagado.toFixed(2)})`,
+      );
+    }
+    const orden = { ...structuredClone(o), descuento, _pendiente: true };
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.descuento',
+          ref: o.id,
+          datos: { descuento },
+          descripcion: `Descuento Bs ${descuento} en ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  /** HU-21 / RN-17: el pago no puede superar el saldo. */
+  async registrarPago(
+    o: OrdenTrabajo,
+    d: { monto: number; metodo: MetodoPago; referencia?: string | null },
+  ) {
+    if (o.estado === 'CANCELADO') throw new Error('No se registran pagos en una orden cancelada');
+    if (!(d.monto > 0)) throw new Error('El monto debe ser mayor a 0');
+    const t = calcularTotales(o);
+    if (d.monto > t.saldo + 0.001) {
+      throw new Error(
+        t.saldo <= 0
+          ? 'La orden no tiene saldo pendiente'
+          : `El pago supera el saldo pendiente (Bs ${t.saldo.toFixed(2)})`,
+      );
+    }
+    const u = this.auth.usuario()!;
+    const pago: Pago = {
+      id: uuid(),
+      monto: d.monto,
+      metodo: d.metodo,
+      referencia: d.referencia?.trim() || null,
+      fecha: ahora(),
+      anulado: false,
+      motivoAnulacion: null,
+      usuario: { id: u.id, nombre: u.nombre },
+    };
+    const orden = structuredClone(o);
+    orden.pagos = [...(orden.pagos ?? []), pago];
+    orden._pendiente = true;
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.pago.registrar',
+          ref: o.id,
+          datos: {
+            id: pago.id,
+            monto: pago.monto,
+            metodo: pago.metodo,
+            referencia: pago.referencia,
+            fecha: pago.fecha,
+          },
+          descripcion: `Cobro Bs ${pago.monto} (${pago.metodo}) en ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  /** Solo administrador: el pago queda registrado como anulado. */
+  async anularPago(o: OrdenTrabajo, pago: Pago, motivo: string) {
+    if (motivo.trim().length < 3) throw new Error('Indique el motivo de la anulación');
+    const orden = structuredClone(o);
+    orden.pagos = (orden.pagos ?? []).map((p) =>
+      p.id === pago.id ? { ...p, anulado: true, motivoAnulacion: motivo.trim() } : p,
+    );
+    orden._pendiente = true;
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.pago.anular',
+          ref: o.id,
+          datos: { pagoId: pago.id, motivo: motivo.trim() },
+          descripcion: `Anular cobro de Bs ${pago.monto} en ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
   // ============================================================ auxiliares
+
+  private verificarEstadoCostos(o: OrdenTrabajo) {
+    if (!ESTADOS_ABIERTOS.includes(o.estado)) {
+      throw new Error('Los costos de una orden cerrada ya no se pueden modificar');
+    }
+  }
+
+  /** RN-17: quitar un cargo no puede dejar el total por debajo de lo ya pagado. */
+  private verificarTotalCubrePagos(o: OrdenTrabajo, montoQuitado: number) {
+    const t = calcularTotales(o);
+    if (t.total - montoQuitado < t.pagado - 0.001) {
+      throw new Error(
+        `No se puede quitar: el total quedaría por debajo de lo ya pagado (Bs ${t.pagado.toFixed(2)}). Anule el pago primero`,
+      );
+    }
+  }
+
 
   /**
    * Encola, aplica localmente y, si hay conexión, sincroniza enseguida.

@@ -9,6 +9,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/login/login.component').then((m) => m.LoginComponent),
   },
+  // Comprobante a pantalla completa (sin menú) para imprimir / PDF.
+  {
+    path: 'ordenes/:id/comprobante',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/ordenes/comprobante.component').then((m) => m.ComprobanteComponent),
+  },
   {
     path: '',
     component: ShellComponent,
@@ -121,6 +128,21 @@ export const routes: Routes = [
         path: 'sincronizacion',
         loadComponent: () =>
           import('./features/sync/sincronizacion.component').then((m) => m.SincronizacionComponent),
+      },
+      // ------------------------------------------------ Iteración 3
+      {
+        path: 'indicadores',
+        canActivate: [rolGuard('ADMIN')],
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'configuracion',
+        canActivate: [rolGuard('ADMIN')],
+        loadComponent: () =>
+          import('./features/configuracion/configuracion.component').then(
+            (m) => m.ConfiguracionComponent,
+          ),
       },
       {
         path: 'usuarios',
