@@ -16,7 +16,7 @@ import { normalizarPlaca } from '../../common/utils/placa.util';
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || null : value;
 
-export const COMBUSTIBLES = ['GASOLINA', 'DIESEL', 'GNV', 'ELECTRICO', 'HIBRIDO'];
+export const COMBUSTIBLES = ['GASOLINA', 'DIESEL', 'GNV', 'GASOLINA/GNV', 'ELECTRICO', 'HIBRIDO'];
 
 export class CreateVehiculoDto {
   /** Opcional: lo envía el frontend cuando el vehículo se registró sin conexión. */

@@ -133,7 +133,7 @@ export interface FichaVehiculo {
   historial: OrdenTrabajo[];
 }
 
-export const COMBUSTIBLES = ['GASOLINA', 'DIESEL', 'GNV', 'ELECTRICO', 'HIBRIDO'];
+export const COMBUSTIBLES = ['GASOLINA', 'DIESEL', 'GNV', 'GASOLINA/GNV', 'ELECTRICO', 'HIBRIDO'];
 
 // ---------------------------------------------------------------- Iteración 2
 
