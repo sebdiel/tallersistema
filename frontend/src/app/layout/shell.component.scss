@@ -246,3 +246,85 @@
   color: var(--peligro);
   font-weight: 600;
 }
+
+/* ---------- Tema "Taller PWA Claro" ---------- */
+
+.barra {
+  background: var(--fondo);
+  color: var(--texto);
+  border-bottom: 1px solid var(--borde);
+}
+
+.nombre-app {
+  letter-spacing: -0.02em;
+}
+
+.taller,
+.u-rol {
+  color: var(--texto-tenue);
+  opacity: 1;
+}
+
+.estado {
+  background: transparent;
+  color: var(--texto-medio);
+  border: 1px solid var(--borde-fuerte);
+}
+
+.estado.offline {
+  background: var(--superficie-2);
+  color: var(--texto-medio);
+  border-color: #e3cf96;
+}
+
+.menu {
+  background: var(--superficie-2);
+}
+
+/* Indicador activo: barrita dorada sobre la opción (móvil) */
+.menu a::before,
+.mas::before {
+  content: '';
+  width: 22px;
+  height: 4px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.menu a.activo,
+.mas.activo {
+  color: var(--primario-claro);
+  font-weight: 500;
+}
+
+.menu a.activo::before,
+.mas.activo::before {
+  background: var(--primario);
+}
+
+.hoja-mas a.activo {
+  background: var(--superficie);
+  color: var(--primario-claro);
+}
+
+.aviso-suscripcion {
+  background: var(--superficie-2);
+  border-bottom-color: var(--borde);
+  color: var(--texto-medio);
+}
+
+.aviso-suscripcion.grave {
+  background: #fbf1f0;
+  border-color: #efd0cd;
+}
+
+@media (min-width: 900px) {
+  .menu a::before {
+    display: none;
+  }
+
+  .menu a.activo {
+    background: var(--superficie);
+    box-shadow: inset 3px 0 0 var(--primario);
+  }
+}

@@ -1,18 +1,24 @@
 /* Estilos globales — diseño mobile-first pensado para tablets en el taller. */
 
+/* Paleta "Taller PWA Claro" (diseño del frontend del proyecto). */
 :root {
-  --primario: #1e3a5f;
-  --primario-claro: #2d5a8e;
-  --acento: #f59e0b;
-  --fondo: #f4f6f9;
-  --superficie: #ffffff;
-  --texto: #1f2937;
-  --texto-suave: #6b7280;
-  --borde: #e5e7eb;
-  --exito: #15803d;
-  --peligro: #b91c1c;
-  --radio: 10px;
-  --sombra: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --primario: #d4a537; /* dorado: botones principales, indicadores activos */
+  --primario-claro: #9a7419; /* dorado oscuro: enlaces y foco (contraste sobre blanco) */
+  --acento: #d4a537;
+  --fondo: #ffffff;
+  --superficie: #f5f5f3;
+  --superficie-2: #f7f7f5;
+  --texto: #141414;
+  --texto-medio: #454545;
+  --texto-suave: #676767;
+  --texto-tenue: #7c7c7c;
+  --borde: #e6e6e3;
+  --borde-fuerte: #dadad6;
+  --exito: #3f7d3a;
+  --peligro: #b3261e;
+  --radio: 14px;
+  --sombra: none;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
 }
 
 *,
@@ -424,4 +430,279 @@ a.item:hover {
   height: 12px;
   border-radius: 50%;
   background: var(--primario-claro);
+}
+
+/* =====================================================================
+   Tema "Taller PWA Claro" — ajustes sobre los componentes base
+   ===================================================================== */
+
+body {
+  font-family: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+h1 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+a {
+  color: var(--primario-claro);
+}
+
+a:hover {
+  color: var(--texto);
+}
+
+/* Tarjetas: superficie gris cálida con borde fino, sin sombra */
+.card,
+.item {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  box-shadow: none;
+}
+
+a.item:hover {
+  outline: none;
+  border-color: var(--borde-fuerte);
+  background: var(--superficie-2);
+}
+
+/* Botones: dorado con texto oscuro; secundario de contorno */
+.btn {
+  background: var(--primario);
+  color: #141414;
+  border-radius: 14px;
+  font-weight: 500;
+}
+
+.btn:hover {
+  background: #c8992c;
+  color: #141414;
+}
+
+.btn-sec {
+  background: transparent;
+  color: var(--texto);
+  border-color: var(--borde-fuerte);
+}
+
+.btn-sec:hover {
+  background: var(--superficie);
+}
+
+.btn-peligro {
+  background: transparent;
+  color: var(--peligro);
+  border-color: #e3b5b1;
+}
+
+.btn-peligro:hover {
+  background: #fbf1f0;
+  color: var(--peligro);
+}
+
+/* Formularios */
+.campo label {
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.campo input,
+.campo select,
+.campo textarea,
+.buscador {
+  background: var(--superficie);
+  border-color: var(--borde-fuerte);
+  border-radius: 10px;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus,
+.buscador:focus {
+  outline: none;
+  border-color: var(--primario-claro);
+}
+
+/* Etiquetas en mayúsculas monoespaciadas (estilo del diseño) */
+.datos dt,
+.tabla th,
+.kpi-titulo {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.placa {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  background: var(--fondo);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+}
+
+.num {
+  font-family: var(--mono);
+}
+
+/* Chips de estado: contorno, sin relleno (como en el diseño) */
+.estado-ot,
+.etiqueta,
+.pendiente-sync {
+  background: transparent;
+  border: 1px solid var(--borde-fuerte);
+  color: var(--texto-medio);
+  font-weight: 500;
+}
+
+.est-recibido { color: var(--texto-medio); border-color: #c4c4bf; }
+.est-diagnostico,
+.est-reparacion { color: #9a7419; border-color: #e3cf96; }
+.est-terminado { color: var(--texto); border-color: #c4c4bf; }
+.est-entregado { background: #f0f0ee; color: var(--texto-tenue); border-color: #f0f0ee; }
+.est-cancelado { color: var(--peligro); border-color: #e3b5b1; }
+
+.etiqueta-ok { color: var(--texto); border-color: #c4c4bf; }
+.etiqueta-off { color: var(--peligro); border-color: #e3b5b1; }
+.pendiente-sync { color: #9a7419; border-color: #e3cf96; }
+
+/* Filtros tipo píldora */
+.filtros button {
+  background: transparent;
+  color: var(--texto-suave);
+}
+
+.filtros button.activo {
+  background: var(--borde);
+  border-color: #c4c4bf;
+  color: var(--texto);
+}
+
+/* Avisos sobrios */
+.alerta-info,
+.alerta-warn {
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  color: var(--texto-medio);
+}
+
+.alerta-error {
+  background: #fbf1f0;
+  border-color: #efd0cd;
+}
+
+.stock-bajo {
+  color: #9a7419;
+}
+
+.linea-tiempo li::before {
+  background: var(--primario);
+}
+
+/* =====================================================================
+   Tema "Taller PWA Industrial" (oscuro) — se activa con data-tema="industrial"
+   ===================================================================== */
+:root[data-tema='industrial'] {
+  --primario: #f2c200;
+  --primario-claro: #f2c200;
+  --acento: #f2c200;
+  --fondo: #0e0e0e;
+  --superficie: #1e1e1e;
+  --superficie-2: #181818;
+  --texto: #ececec;
+  --texto-medio: #b5b5b5;
+  --texto-suave: #8f8f8f;
+  --texto-tenue: #7a7a7a;
+  --borde: #2f2f2f;
+  --borde-fuerte: #3a3a3a;
+  --exito: #7fbf6a;
+  --peligro: #ff8a80;
+  color-scheme: dark;
+}
+
+[data-tema='industrial'] body {
+  background: #0a0a0a;
+}
+
+[data-tema='industrial'] .btn,
+[data-tema='industrial'] .btn:hover {
+  color: #181818;
+}
+
+[data-tema='industrial'] .btn:hover {
+  background: #ffd633;
+}
+
+[data-tema='industrial'] .btn-sec,
+[data-tema='industrial'] .btn-peligro {
+  background: transparent;
+  color: var(--texto);
+}
+
+[data-tema='industrial'] .btn-peligro {
+  color: var(--peligro);
+  border-color: #5c2b2e;
+}
+
+[data-tema='industrial'] .btn-peligro:hover,
+[data-tema='industrial'] .alerta-error,
+[data-tema='industrial'] .aviso-suscripcion.grave {
+  background: #2a1215;
+  border-color: #5c2b2e;
+  color: var(--peligro);
+}
+
+[data-tema='industrial'] a:hover {
+  color: #ffd633;
+}
+
+[data-tema='industrial'] .est-recibido,
+[data-tema='industrial'] .est-terminado,
+[data-tema='industrial'] .etiqueta-ok {
+  border-color: #4a4a4a;
+}
+
+[data-tema='industrial'] .est-diagnostico,
+[data-tema='industrial'] .est-reparacion,
+[data-tema='industrial'] .pendiente-sync {
+  color: #f2c200;
+  border-color: #5c4b0c;
+}
+
+[data-tema='industrial'] .est-entregado {
+  background: #262626;
+  border-color: #262626;
+}
+
+[data-tema='industrial'] .est-cancelado,
+[data-tema='industrial'] .etiqueta-off {
+  border-color: #5c2b2e;
+}
+
+[data-tema='industrial'] .filtros button.activo {
+  background: #2f2f2f;
+  border-color: #4a4a4a;
+}
+
+[data-tema='industrial'] .stock-bajo {
+  color: #f2c200;
+}
+
+/* Franja de advertencia amarillo/negro y hexágonos del diseño industrial */
+[data-tema='industrial'] .barra {
+  border-top: 6px solid transparent;
+  border-image: repeating-linear-gradient(-45deg, #f2c200 0 9px, #141414 9px 18px) 6 0 0 0;
+}
+
+[data-tema='industrial'] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%23ffffff' fill-opacity='0.035' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/svg%3E");
 }

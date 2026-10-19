@@ -51,7 +51,7 @@ import { AuthService } from '../../core/auth.service';
       display: grid;
       place-items: center;
       padding: 16px;
-      background: linear-gradient(160deg, var(--primario), #0f1f33);
+      background: var(--superficie-2);
     }
     .caja {
       width: 100%;

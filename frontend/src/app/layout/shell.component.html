@@ -24,6 +24,7 @@
         <div class="u-nombre">{{ u.nombre }}</div>
         <div class="u-rol">{{ rolLabel[u.rol] }}</div>
       </div>
+      <button class="btn btn-sec salir" (click)="cambiarTema()" [title]="tema() === 'claro' ? 'Tema industrial (oscuro)' : 'Tema claro'">{{ tema() === 'claro' ? '◐ Oscuro' : '◑ Claro' }}</button>
       <button class="btn btn-sec salir" (click)="salir()" title="Cerrar sesión">Salir</button>
     </div>
   </header>
@@ -44,14 +45,14 @@
           [routerLinkActiveOptions]="{ exact: item.ruta === '/' || item.ruta === '/admin' }"
           [class.secundario]="!item.principal"
         >
-          <span class="icono">{{ item.icono }}</span>
+          <app-icono class="icono" [nombre]="item.icono" />
           <span>{{ item.texto }}</span>
         </a>
       }
       <!-- Celular: el resto de opciones van en "Más" -->
       @if (secundarios().length) {
         <button class="mas" type="button" [class.activo]="masAbierto()" (click)="masAbierto.set(!masAbierto())" aria-label="Más opciones">
-          <span class="icono">☰</span>
+          <app-icono class="icono" nombre="mas" />
           <span>Más</span>
         </button>
       }
@@ -62,7 +63,7 @@
       <div class="hoja-mas" role="menu">
         @for (item of secundarios(); track item.ruta) {
           <a [routerLink]="item.ruta" routerLinkActive="activo" role="menuitem">
-            <span class="icono">{{ item.icono }}</span>
+            <app-icono class="icono" [nombre]="item.icono" />
             <span>{{ item.texto }}</span>
           </a>
         }

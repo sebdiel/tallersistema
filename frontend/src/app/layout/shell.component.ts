@@ -6,6 +6,7 @@ import { AuthService } from '../core/auth.service';
 import { ConexionService } from '../core/conexion.service';
 import { ROL_LABEL, Rol } from '../core/models';
 import { SyncService } from '../core/sync.service';
+import { IconoComponent } from './icono.component';
 
 interface ItemMenu {
   ruta: string;
@@ -18,24 +19,24 @@ interface ItemMenu {
 
 const MENU: ItemMenu[] = [
   // SUPERADMIN (Iteración 4): administración global del sistema comercial.
-  { ruta: '/admin', texto: 'Panel', icono: '📈', roles: ['SUPERADMIN'], principal: true },
-  { ruta: '/admin/talleres', texto: 'Talleres', icono: '🏪', roles: ['SUPERADMIN'], principal: true },
-  { ruta: '/', texto: 'Inicio', icono: '🏠', roles: ['ADMIN', 'MECANICO'], principal: true },
-  { ruta: '/ordenes', texto: 'Órdenes', icono: '📋', roles: ['ADMIN', 'MECANICO'], principal: true },
-  { ruta: '/vehiculos', texto: 'Vehículos', icono: '🚗', roles: ['ADMIN', 'MECANICO'], principal: true },
-  { ruta: '/inventario', texto: 'Inventario', icono: '📦', roles: ['ADMIN', 'MECANICO'], principal: true },
-  { ruta: '/indicadores', texto: 'Indicadores', icono: '📊', roles: ['ADMIN'] },
-  { ruta: '/clientes', texto: 'Clientes', icono: '👤', roles: ['ADMIN', 'MECANICO'] },
-  { ruta: '/configuracion', texto: 'Configuración', icono: '⚙️', roles: ['ADMIN'] },
-  { ruta: '/usuarios', texto: 'Personal', icono: '🔧', roles: ['ADMIN'] },
-  { ruta: '/sincronizacion', texto: 'Sincronización', icono: '⟳', roles: ['ADMIN', 'MECANICO'] },
+  { ruta: '/admin', texto: 'Panel', icono: 'panel', roles: ['SUPERADMIN'], principal: true },
+  { ruta: '/admin/talleres', texto: 'Talleres', icono: 'talleres', roles: ['SUPERADMIN'], principal: true },
+  { ruta: '/', texto: 'Inicio', icono: 'inicio', roles: ['ADMIN', 'MECANICO'], principal: true },
+  { ruta: '/ordenes', texto: 'Órdenes', icono: 'ordenes', roles: ['ADMIN', 'MECANICO'], principal: true },
+  { ruta: '/vehiculos', texto: 'Vehículos', icono: 'vehiculos', roles: ['ADMIN', 'MECANICO'], principal: true },
+  { ruta: '/inventario', texto: 'Inventario', icono: 'inventario', roles: ['ADMIN', 'MECANICO'], principal: true },
+  { ruta: '/indicadores', texto: 'Indicadores', icono: 'indicadores', roles: ['ADMIN'] },
+  { ruta: '/clientes', texto: 'Clientes', icono: 'clientes', roles: ['ADMIN', 'MECANICO'] },
+  { ruta: '/configuracion', texto: 'Configuración', icono: 'configuracion', roles: ['ADMIN'] },
+  { ruta: '/usuarios', texto: 'Personal', icono: 'personal', roles: ['ADMIN'] },
+  { ruta: '/sincronizacion', texto: 'Sincronización', icono: 'sincronizacion', roles: ['ADMIN', 'MECANICO'] },
 ];
 
 /** Estructura principal: barra superior + menú lateral (escritorio) o inferior (móvil). */
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconoComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
@@ -47,6 +48,20 @@ export class ShellComponent {
 
   /** Hoja "Más" del menú inferior (móvil). */
   readonly masAbierto = signal(false);
+
+  /** Tema visual: claro ("Taller PWA Claro") o industrial (oscuro). */
+  readonly tema = signal<'claro' | 'industrial'>(
+    document.documentElement.dataset['tema'] === 'industrial' ? 'industrial' : 'claro',
+  );
+
+  cambiarTema(): void {
+    const nuevo = this.tema() === 'claro' ? 'industrial' : 'claro';
+    this.tema.set(nuevo);
+    document.documentElement.dataset['tema'] = nuevo;
+    try {
+      localStorage.setItem('tema', nuevo);
+    } catch {}
+  }
 
   // HU-03: el menú solo muestra lo que el rol puede usar.
   readonly menu = computed(() => {

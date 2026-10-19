@@ -8,8 +8,8 @@ import { ChartConfiguration } from 'chart.js';
  * tarjeta nombra la serie. Barras finas con extremo redondeado de 4px, grilla
  * tenue de 1px, tooltip al pasar el dedo/mouse, y tabla de datos alternativa.
  */
-export const COLOR_SERIE = '#2a78d6';
-const COLOR_HOVER = '#1c5cab';
+export const COLOR_SERIE = '#d4a537';
+const COLOR_HOVER = '#9a7419';
 const GRILLA = '#eef0f3';
 const TEXTO_EJES = '#6b7280';
 
