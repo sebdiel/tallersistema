@@ -7,11 +7,12 @@ import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
 import { ESTADOS_ABIERTOS, ESTADO_INFO } from '../../core/estados';
 import { Alerta } from '../../core/models';
+import { IconoComponent } from '../../layout/icono.component';
 
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [RouterLink],
+  imports: [IconoComponent, RouterLink],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -47,7 +48,7 @@ import { Alerta } from '../../core/models';
                     <span>💳 {{ a.mensaje }}</span>
                   } @else {
                     <a [routerLink]="a.tipo === 'STOCK_BAJO' ? ['/inventario', a.referenciaId] : ['/ordenes', a.referenciaId]">
-                      {{ a.tipo === 'STOCK_BAJO' ? '📦' : '✅' }} {{ a.mensaje }}
+                      <app-icono [nombre]="a.tipo === 'STOCK_BAJO' ? 'inventario' : 'ok'" /> {{ a.mensaje }}
                     </a>
                   }
                   @if (a.tipo === 'ORDEN_TERMINADA') {
@@ -63,23 +64,23 @@ import { Alerta } from '../../core/models';
 
         <div class="accesos">
           <a class="card acceso" routerLink="/vehiculos">
-            <span class="icono">🔎</span>
+            <app-icono class="icono" nombre="buscar" />
             <strong>Buscar vehículo</strong>
             <small>Por placa, marca o modelo</small>
           </a>
           <a class="card acceso" routerLink="/inventario">
-            <span class="icono">📦</span>
+            <app-icono class="icono" nombre="inventario" />
             <strong>Inventario</strong>
             <small>Stock de repuestos</small>
           </a>
           <a class="card acceso" routerLink="/clientes/nuevo">
-            <span class="icono">➕</span>
+            <app-icono class="icono" nombre="agregar" />
             <strong>Nuevo cliente</strong>
             <small>Registrar propietario</small>
           </a>
           @if (auth.tieneRol('ADMIN')) {
             <a class="card acceso" routerLink="/usuarios">
-              <span class="icono">🔧</span>
+              <app-icono class="icono" nombre="personal" />
               <strong>Personal</strong>
               <small>Gestionar mecánicos</small>
             </a>

@@ -22,6 +22,12 @@ const ICONOS: Record<string, string> = {
   panel: '<path d="M4 19l5-6 4 3 7-9"/><path d="M15 7h5v5"/>',
   talleres:
     '<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/><path d="M10 21v-5h4v5"/>',
+  buscar: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+  agregar: '<path d="M12 5v14M5 12h14"/>',
+  comprobante: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  imprimir: '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  alerta: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.5v.01"/>',
+  ok: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
   mas: '<path d="M4 6h16M4 12h16M4 18h16"/>',
 };
 
@@ -30,7 +36,7 @@ const ICONOS: Record<string, string> = {
   standalone: true,
   template: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" [innerHTML]="svg()"></svg>`,
-  styles: `:host { display: inline-flex; } svg { width: 1em; height: 1em; }`,
+  styles: `:host { display: inline-flex; } svg { width: 1em; height: 1em; vertical-align: -0.125em; }`,
 })
 export class IconoComponent {
   readonly nombre = input.required<string>();

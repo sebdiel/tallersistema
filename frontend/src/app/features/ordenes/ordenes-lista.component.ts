@@ -9,6 +9,7 @@ import { DatosService } from '../../core/datos.service';
 import { ESTADO_INFO } from '../../core/estados';
 import { EstadoOrden, OrdenTrabajo, formatoNumero } from '../../core/models';
 import { SyncService } from '../../core/sync.service';
+import { IconoComponent } from '../../layout/icono.component';
 
 type Filtro = 'ABIERTAS' | 'TODAS' | EstadoOrden;
 
@@ -26,7 +27,7 @@ const FILTROS: { valor: Filtro; texto: string }[] = [
 @Component({
   selector: 'app-ordenes-lista',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [IconoComponent, ReactiveFormsModule, RouterLink, DatePipe],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -70,7 +71,7 @@ const FILTROS: { valor: Filtro; texto: string }[] = [
                   <div class="item-sub">
                     🕒 {{ o.fechaIngreso | date: 'dd/MM HH:mm' }}
                     @if (o.mecanico) {
-                      · 🔧 {{ o.mecanico.nombre }}
+                      · <app-icono nombre="personal" /> {{ o.mecanico.nombre }}
                     } @else {
                       · <em>sin mecánico</em>
                     }

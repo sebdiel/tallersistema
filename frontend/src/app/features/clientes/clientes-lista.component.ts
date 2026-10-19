@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { IconoComponent } from '../../layout/icono.component';
 import {
   catchError,
   combineLatest,
@@ -20,7 +21,7 @@ import { Cliente } from '../../core/models';
 @Component({
   selector: 'app-clientes-lista',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [IconoComponent, ReactiveFormsModule, RouterLink],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -65,7 +66,7 @@ import { Cliente } from '../../core/models';
                   @if (!c.activo) {
                     <span class="etiqueta etiqueta-off">Desactivado</span>
                   }
-                  <span class="etiqueta">🚗 {{ c.totalVehiculos ?? 0 }}</span>
+                  <span class="etiqueta"><app-icono nombre="vehiculos" /> {{ c.totalVehiculos ?? 0 }}</span>
                 </div>
               </a>
             </li>

@@ -5,12 +5,13 @@ import { VehiculosApi } from '../../core/api.service';
 import { mensajeError } from '../../core/auth.interceptor';
 import { ESTADO_INFO } from '../../core/estados';
 import { FichaVehiculo, formatoNumero } from '../../core/models';
+import { IconoComponent } from '../../layout/icono.component';
 
 /** HU-07: ficha técnica e historial del vehículo. */
 @Component({
   selector: 'app-vehiculo-ficha',
   standalone: true,
-  imports: [RouterLink, DecimalPipe, DatePipe],
+  imports: [IconoComponent, RouterLink, DecimalPipe, DatePipe],
   template: `
     <div class="pagina">
       @if (error()) {
@@ -75,7 +76,7 @@ import { FichaVehiculo, formatoNumero } from '../../core/models';
                     <div class="item-titulo">{{ numero(o.numero) }} · {{ o.fechaIngreso | date: 'dd/MM/yyyy' }}</div>
                     <div class="item-sub">{{ o.problemaReportado }}</div>
                     @if (o.diagnostico) {
-                      <div class="item-sub">🔧 {{ o.diagnostico }}</div>
+                      <div class="item-sub"><app-icono nombre="personal" /> {{ o.diagnostico }}</div>
                     }
                     <div class="item-sub">
                       {{ o.kilometrajeIngreso | number }} km · {{ o.repuestos?.length ?? 0 }} repuesto(s)

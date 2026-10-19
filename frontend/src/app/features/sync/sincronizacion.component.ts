@@ -3,12 +3,13 @@ import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { ConexionService } from '../../core/conexion.service';
 import { Conflicto, OperacionPendiente } from '../../core/db';
 import { SyncService } from '../../core/sync.service';
+import { IconoComponent } from '../../layout/icono.component';
 
 /** HU-16: estado de la sincronización offline. */
 @Component({
   selector: 'app-sincronizacion',
   standalone: true,
-  imports: [DatePipe],
+  imports: [IconoComponent, DatePipe],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -31,7 +32,7 @@ import { SyncService } from '../../core/sync.service';
 
       @if (conflictos().length) {
         <section class="card">
-          <h2>⚠ Operaciones rechazadas por el servidor</h2>
+          <h2><app-icono nombre="alerta" /> Operaciones rechazadas por el servidor</h2>
           <p class="item-sub">
             Se hicieron sin conexión, pero al sincronizar no cumplían una regla (por ejemplo, otro
             usuario ya había usado el último repuesto). Revise la orden y vuelva a registrarlo si corresponde.

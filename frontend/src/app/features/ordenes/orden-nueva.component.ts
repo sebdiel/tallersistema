@@ -5,6 +5,7 @@ import { mensajeError } from '../../core/auth.interceptor';
 import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
 import { Cliente, Persona, Vehiculo } from '../../core/models';
+import { IconoComponent } from '../../layout/icono.component';
 
 type Modo = 'existente' | 'nuevo';
 
@@ -12,7 +13,7 @@ type Modo = 'existente' | 'nuevo';
 @Component({
   selector: 'app-orden-nueva',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [IconoComponent, ReactiveFormsModule, RouterLink],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -48,7 +49,7 @@ type Modo = 'existente' | 'nuevo';
             <div class="item" style="box-shadow: none; border: 1px solid var(--borde)">
               <div>
                 <div class="item-titulo">{{ v.marca }} {{ v.modelo }} {{ v.anio ?? '' }}</div>
-                <div class="item-sub">👤 {{ v.cliente?.nombre }} · último km: {{ v.kilometraje }}</div>
+                <div class="item-sub"><app-icono nombre="clientes" /> {{ v.cliente?.nombre }} · último km: {{ v.kilometraje }}</div>
               </div>
               <div>
                 <span class="placa">{{ v.placa }}</span>
@@ -70,7 +71,7 @@ type Modo = 'existente' | 'nuevo';
                   <button type="button" class="item" style="width: 100%; border: none; font: inherit; cursor: pointer; text-align: left" (click)="elegirVehiculo(v)">
                     <div>
                       <div class="item-titulo">{{ v.marca }} {{ v.modelo }}</div>
-                      <div class="item-sub">👤 {{ v.cliente?.nombre }}</div>
+                      <div class="item-sub"><app-icono nombre="clientes" /> {{ v.cliente?.nombre }}</div>
                     </div>
                     <span class="placa">{{ v.placa }}</span>
                   </button>

@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { IconoComponent } from '../../layout/icono.component';
 import {
   catchError,
   debounceTime,
@@ -19,7 +20,7 @@ import { Vehiculo } from '../../core/models';
 @Component({
   selector: 'app-vehiculos-lista',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [IconoComponent, ReactiveFormsModule, RouterLink],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -48,7 +49,7 @@ import { Vehiculo } from '../../core/models';
               <a class="item" [routerLink]="['/vehiculos', v.id]">
                 <div>
                   <div class="item-titulo">{{ v.marca }} {{ v.modelo }} {{ v.anio ?? '' }}</div>
-                  <div class="item-sub">👤 {{ v.cliente?.nombre }} · {{ v.kilometraje }} km</div>
+                  <div class="item-sub"><app-icono nombre="clientes" /> {{ v.cliente?.nombre }} · {{ v.kilometraje }} km</div>
                 </div>
                 <span class="placa">{{ v.placa }}</span>
               </a>

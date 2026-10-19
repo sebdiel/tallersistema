@@ -7,17 +7,18 @@ import { ServiciosApi, TallerApi } from '../../core/api.service';
 import { mensajeError } from '../../core/auth.interceptor';
 import { Servicio } from '../../core/models';
 import { SyncService } from '../../core/sync.service';
+import { IconoComponent } from '../../layout/icono.component';
 
 /** Configuración del taller (solo administrador). */
 @Component({
   selector: 'app-configuracion',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe],
+  imports: [IconoComponent, FormsModule, RouterLink, DecimalPipe],
   template: `
     <div class="pagina">
       <div class="encabezado">
         <h1>Configuración</h1>
-        <a class="btn btn-sec" routerLink="/usuarios">🔧 Personal del taller</a>
+        <a class="btn btn-sec" routerLink="/usuarios"><app-icono nombre="personal" /> Personal del taller</a>
       </div>
 
       @if (error()) {

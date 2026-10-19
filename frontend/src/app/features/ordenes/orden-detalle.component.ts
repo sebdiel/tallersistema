@@ -1,3 +1,4 @@
+import { IconoComponent } from '../../layout/icono.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -31,7 +32,7 @@ import {
 @Component({
   selector: 'app-orden-detalle',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, DecimalPipe],
+  imports: [IconoComponent, RouterLink, FormsModule, DatePipe, DecimalPipe],
   templateUrl: './orden-detalle.component.html',
   styles: `
     .cabecera-ot {

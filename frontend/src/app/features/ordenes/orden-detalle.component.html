@@ -13,7 +13,7 @@
         </div>
       </div>
       <a class="btn btn-sec" [routerLink]="['/ordenes', o.id, 'comprobante']">
-        🧾 {{ o.estado === 'ENTREGADO' || o.estado === 'TERMINADO' ? 'Comprobante' : 'Presupuesto' }}
+        <app-icono nombre="comprobante" /> {{ o.estado === 'ENTREGADO' || o.estado === 'TERMINADO' ? 'Comprobante' : 'Presupuesto' }}
       </a>
     </div>
 
@@ -221,7 +221,7 @@
                 <td>
                   {{ l.descripcion }}
                   @if (l.mecanico) {
-                    <div class="item-sub">🔧 {{ l.mecanico.nombre }}</div>
+                    <div class="item-sub"><app-icono nombre="personal" /> {{ l.mecanico.nombre }}</div>
                   }
                 </td>
                 <td class="num">{{ l.monto | number: '1.2-2' }}</td>

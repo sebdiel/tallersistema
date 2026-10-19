@@ -6,6 +6,7 @@ import { calcularTotales } from '../../core/costos';
 import { DatosService } from '../../core/datos.service';
 import { ESTADO_INFO } from '../../core/estados';
 import { OrdenTrabajo, Taller, formatoNumero } from '../../core/models';
+import { IconoComponent } from '../../layout/icono.component';
 
 /**
  * HU-20: comprobante de servicio / presupuesto imprimible (o PDF con
@@ -15,11 +16,11 @@ import { OrdenTrabajo, Taller, formatoNumero } from '../../core/models';
 @Component({
   selector: 'app-comprobante',
   standalone: true,
-  imports: [RouterLink, DatePipe, DecimalPipe],
+  imports: [IconoComponent, RouterLink, DatePipe, DecimalPipe],
   template: `
     <div class="barra-acciones no-imprimir">
       <a class="btn btn-sec" [routerLink]="['/ordenes', id()]">← Volver</a>
-      <button class="btn" (click)="imprimir()">🖨 Imprimir / Guardar PDF</button>
+      <button class="btn" (click)="imprimir()"><app-icono nombre="imprimir" /> Imprimir / Guardar PDF</button>
     </div>
 
     @if (error()) {

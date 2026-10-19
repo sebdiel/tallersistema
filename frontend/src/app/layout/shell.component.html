@@ -16,7 +16,7 @@
             · {{ sync.pendientes() }} pendiente(s)
           }
           @if (sync.conflictos()) {
-            · ⚠ {{ sync.conflictos() }}
+            · <app-icono nombre="alerta" /> {{ sync.conflictos() }}
           }
         </a>
       }
