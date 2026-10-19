@@ -420,3 +420,41 @@
     margin: -2.5px 0 0;
   }
 }
+
+/* Escritorio: ícono + nombre, como la barra lateral de Instagram */
+@media (min-width: 900px) {
+  .menu {
+    width: 240px;
+    align-items: stretch;
+    gap: 4px;
+    padding: 16px 12px;
+  }
+
+  .menu a {
+    width: auto;
+    height: 52px;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 0 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  .menu a > span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+
+  .menu a.activo {
+    background: var(--superficie);
+    font-weight: 700;
+  }
+
+  .menu a.activo::after {
+    display: none;
+  }
+}
