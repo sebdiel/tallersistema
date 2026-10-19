@@ -328,3 +328,95 @@
     box-shadow: inset 3px 0 0 var(--primario);
   }
 }
+
+/* =====================================================================
+   Estilo "Instagram": solo íconos, grandes y limpios; el activo, más grueso.
+   El nombre de la opción se muestra como tooltip (title) y para lectores
+   de pantalla (aria-label).
+   ===================================================================== */
+.menu a > span,
+.mas > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.menu a,
+.mas {
+  position: relative;
+  justify-content: center;
+  padding: 14px 4px;
+  color: var(--texto);
+}
+
+.menu a::before,
+.mas::before {
+  display: none;
+}
+
+.menu .icono,
+.mas .icono {
+  font-size: 26px;
+  transition: transform 0.12s ease;
+}
+
+.menu a:hover .icono,
+.mas:hover .icono {
+  transform: scale(1.06);
+}
+
+.menu a.activo,
+.mas.activo {
+  color: var(--texto);
+  background: none;
+  box-shadow: none;
+}
+
+.menu a.activo ::ng-deep svg,
+.mas.activo ::ng-deep svg {
+  stroke-width: 2.8;
+}
+
+/* Puntito de acento bajo la opción activa */
+.menu a.activo::after,
+.mas.activo::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--primario);
+}
+
+@media (min-width: 900px) {
+  .menu {
+    width: 76px;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 0;
+  }
+
+  .menu a {
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .menu a:hover {
+    background: var(--superficie-2);
+  }
+
+  .menu a.activo::after {
+    bottom: auto;
+    top: 50%;
+    left: -12px;
+    margin: -2.5px 0 0;
+  }
+}

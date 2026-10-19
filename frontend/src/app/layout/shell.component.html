@@ -44,6 +44,8 @@
           routerLinkActive="activo"
           [routerLinkActiveOptions]="{ exact: item.ruta === '/' || item.ruta === '/admin' }"
           [class.secundario]="!item.principal"
+          [title]="item.texto"
+          [attr.aria-label]="item.texto"
         >
           <app-icono class="icono" [nombre]="item.icono" />
           <span>{{ item.texto }}</span>
