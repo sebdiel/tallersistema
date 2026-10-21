@@ -30,9 +30,18 @@
   </header>
 
   <!-- HU-27: aviso de vencimiento de la suscripción -->
-  @if (auth.suscripcion()?.mensaje) {
-    <div class="aviso-suscripcion" [class.grave]="auth.suscripcion()?.estado === 'EN_GRACIA'" role="status">
-      💳 {{ auth.suscripcion()?.mensaje }}
+  @if (avisoVisible()) {
+    <div class="modal-velo">
+      <div class="modal-aviso" [class.grave]="auth.suscripcion()?.estado === 'EN_GRACIA'"
+        role="alertdialog" aria-modal="true" aria-labelledby="aviso-titulo">
+        <div class="modal-icono"><app-icono nombre="alerta" /></div>
+        <h2 id="aviso-titulo">
+          {{ auth.suscripcion()?.estado === 'EN_GRACIA' ? 'Suscripción vencida' : 'Suscripción por vencer' }}
+        </h2>
+        <p>{{ auth.suscripcion()?.mensaje }}</p>
+        <p class="modal-nota">Comuníquese con el proveedor del sistema para renovar el pago.</p>
+        <button type="button" class="modal-boton" (click)="aceptarAviso()">Aceptar</button>
+      </div>
     </div>
   }
 
@@ -49,6 +58,9 @@
         >
           <app-icono class="icono" [nombre]="item.icono" />
           <span>{{ item.texto }}</span>
+          @if (item.ruta === '/notificaciones' && alertas.cantidad()) {
+            <b class="contador-alertas">{{ alertas.cantidad() }}</b>
+          }
         </a>
       }
       <!-- Celular: el resto de opciones van en "Más" -->
@@ -56,6 +68,9 @@
         <button class="mas" type="button" [class.activo]="masAbierto()" (click)="masAbierto.set(!masAbierto())" aria-label="Más opciones">
           <app-icono class="icono" nombre="mas" />
           <span>Más</span>
+          @if (alertas.cantidad()) {
+            <b class="contador-alertas">{{ alertas.cantidad() }}</b>
+          }
         </button>
       }
     </nav>
@@ -67,6 +82,9 @@
           <a [routerLink]="item.ruta" routerLinkActive="activo" role="menuitem">
             <app-icono class="icono" [nombre]="item.icono" />
             <span>{{ item.texto }}</span>
+            @if (item.ruta === '/notificaciones' && alertas.cantidad()) {
+              <b class="contador-alertas">{{ alertas.cantidad() }}</b>
+            }
           </a>
         }
       </div>

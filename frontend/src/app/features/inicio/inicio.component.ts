@@ -1,12 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AlertasApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
 import { ESTADOS_ABIERTOS, ESTADO_INFO } from '../../core/estados';
-import { Alerta } from '../../core/models';
 import { IconoComponent } from '../../layout/icono.component';
 
 @Component({
@@ -36,31 +34,6 @@ import { IconoComponent } from '../../layout/icono.component';
             </a>
           }
         </div>
-
-        <!-- RN-12 / RN-13: alertas del motor de reglas -->
-        @if (alertas().length) {
-          <section class="card">
-            <h2>🔔 Alertas</h2>
-            <ul class="lista">
-              @for (a of alertas(); track a.id) {
-                <li class="item" style="box-shadow: none; border: 1px solid var(--borde)">
-                  @if (a.tipo === 'SUSCRIPCION') {
-                    <span>💳 {{ a.mensaje }}</span>
-                  } @else {
-                    <a [routerLink]="a.tipo === 'STOCK_BAJO' ? ['/inventario', a.referenciaId] : ['/ordenes', a.referenciaId]">
-                      <app-icono [nombre]="a.tipo === 'STOCK_BAJO' ? 'inventario' : 'ok'" /> {{ a.mensaje }}
-                    </a>
-                  }
-                  @if (a.tipo === 'ORDEN_TERMINADA') {
-                    <button class="btn btn-sec" style="min-height: 34px" (click)="resolver(a)">Ya avisé</button>
-                  }
-                </li>
-              }
-            </ul>
-          </section>
-        } @else if (!conexion.enLinea()) {
-          <p class="item-sub">Las alertas se muestran cuando hay conexión.</p>
-        }
 
         <div class="accesos">
           <a class="card acceso" routerLink="/vehiculos">
@@ -141,25 +114,14 @@ export class InicioComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly conexion = inject(ConexionService);
   private readonly datos = inject(DatosService);
-  private readonly alertasApi = inject(AlertasApi);
 
   readonly estados = ESTADOS_ABIERTOS;
   readonly info = ESTADO_INFO;
   readonly resumen = signal<Partial<Record<string, number>>>({});
-  readonly alertas = signal<Alerta[]>([]);
 
   async ngOnInit() {
     if (this.auth.tieneRol('SUPERADMIN')) return;
     this.datos.resumenOrdenes().then((r) => this.resumen.set(r)).catch(() => {});
-    try {
-      this.alertas.set(await firstValueFrom(this.alertasApi.listar()));
-    } catch {
-      // Sin conexión: las alertas son del servidor.
-    }
   }
 
-  async resolver(a: Alerta) {
-    await firstValueFrom(this.alertasApi.resolver(a.id));
-    this.alertas.update((l) => l.filter((x) => x.id !== a.id));
-  }
 }

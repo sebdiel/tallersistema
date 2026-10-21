@@ -157,6 +157,10 @@ export const routes: Routes = [
           import('./features/inventario/repuesto-form.component').then((m) => m.RepuestoFormComponent),
       },
       {
+        path: 'notificaciones',
+        loadComponent: () => import('./features/alertas/alertas.component').then((m) => m.AlertasComponent),
+      },
+      {
         path: 'sincronizacion',
         loadComponent: () =>
           import('./features/sync/sincronizacion.component').then((m) => m.SincronizacionComponent),

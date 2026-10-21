@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
+import { AlertasService } from '../core/alertas.service';
 import { AuthService } from '../core/auth.service';
 import { ConexionService } from '../core/conexion.service';
 import { ROL_LABEL, Rol } from '../core/models';
@@ -26,6 +27,7 @@ const MENU: ItemMenu[] = [
   { ruta: '/vehiculos', texto: 'Vehículos', icono: 'vehiculos', roles: ['ADMIN', 'MECANICO'], principal: true },
   { ruta: '/inventario', texto: 'Inventario', icono: 'inventario', roles: ['ADMIN', 'MECANICO'], principal: true },
   { ruta: '/indicadores', texto: 'Indicadores', icono: 'indicadores', roles: ['ADMIN'] },
+  { ruta: '/notificaciones', texto: 'Notificaciones', icono: 'campana', roles: ['ADMIN', 'MECANICO'] },
   { ruta: '/clientes', texto: 'Clientes', icono: 'clientes', roles: ['ADMIN', 'MECANICO'] },
   { ruta: '/configuracion', texto: 'Configuración', icono: 'configuracion', roles: ['ADMIN'] },
   { ruta: '/usuarios', texto: 'Personal', icono: 'personal', roles: ['ADMIN'] },
@@ -44,6 +46,7 @@ export class ShellComponent {
   readonly auth = inject(AuthService);
   readonly conexion = inject(ConexionService);
   readonly sync = inject(SyncService);
+  readonly alertas = inject(AlertasService);
   readonly rolLabel = ROL_LABEL;
 
   /** Hoja "Más" del menú inferior (móvil). */
@@ -71,12 +74,36 @@ export class ShellComponent {
   readonly principales = computed(() => this.menu().filter((m) => m.principal));
   readonly secundarios = computed(() => this.menu().filter((m) => !m.principal));
 
+  /** HU-27: el aviso de suscripción se muestra como ventana una vez por sesión. */
+  private readonly avisoAceptado = signal(this.leerAceptado());
+  readonly avisoVisible = computed(() => {
+    const msg = this.auth.suscripcion()?.mensaje;
+    return !!msg && msg !== this.avisoAceptado();
+  });
+
+  aceptarAviso(): void {
+    const msg = this.auth.suscripcion()?.mensaje ?? '';
+    this.avisoAceptado.set(msg);
+    try {
+      sessionStorage.setItem('avisoSuscripcion', msg);
+    } catch {}
+  }
+
+  private leerAceptado(): string | null {
+    try {
+      return sessionStorage.getItem('avisoSuscripcion');
+    } catch {
+      return null;
+    }
+  }
+
   constructor() {
     // El SUPERADMIN no opera un taller: no necesita datos offline.
     if (!this.auth.tieneRol('SUPERADMIN')) {
       this.sync.iniciar();
       // Estado de la suscripción al día (aviso de vencimiento).
       this.auth.refrescarPerfil();
+      this.alertas.cargar();
     }
 
     inject(Router)
@@ -84,7 +111,11 @@ export class ShellComponent {
         filter((e) => e instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.masAbierto.set(false));
+      .subscribe(() => {
+        this.masAbierto.set(false);
+        // Número de la campanita al día al cambiar de pantalla.
+        if (!this.auth.tieneRol('SUPERADMIN')) this.alertas.cargar();
+      });
   }
 
   async salir() {

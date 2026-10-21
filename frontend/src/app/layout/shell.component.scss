@@ -450,11 +450,140 @@
   }
 
   .menu a.activo {
-    background: var(--superficie);
+    background: #f5b301;
+    color: #1a1a1a;
     font-weight: 700;
+  }
+
+  .menu a.activo:hover {
+    background: #ffc21a;
   }
 
   .menu a.activo::after {
     display: none;
   }
+}
+
+/* Celular: la opción activa también en amarillo */
+@media (max-width: 899px) {
+  .menu a.activo,
+  .mas.activo {
+    color: #f5b301;
+  }
+
+  .menu a.activo::after,
+  .mas.activo::after {
+    background: #f5b301;
+  }
+}
+
+/* ---------- Ventana de aviso de suscripción (HU-27) ---------- */
+.modal-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-aviso {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 24px 22px;
+  border-radius: 16px;
+  background: var(--superficie);
+  color: var(--texto);
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  border-top: 5px solid #f5b301;
+}
+
+.modal-aviso.grave {
+  border-top-color: var(--peligro);
+}
+
+.modal-icono {
+  font-size: 2.6rem;
+  color: #f5b301;
+  margin-bottom: 8px;
+}
+
+.modal-aviso.grave .modal-icono {
+  color: var(--peligro);
+}
+
+.modal-aviso h2 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+}
+
+.modal-aviso p {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.modal-nota {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.modal-boton {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #f5b301;
+  color: #1a1a1a;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-boton:hover {
+  background: #ffc21a;
+}
+
+/* ---------- Número de alertas en la campanita ---------- */
+.menu a,
+.mas,
+.hoja-mas a {
+  position: relative;
+}
+
+.contador-alertas {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  margin-left: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #e53935;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  .menu .contador-alertas {
+    position: static;
+    margin-left: auto;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    font-size: 0.78rem;
+    line-height: 22px;
+  }
+}
+
+.hoja-mas .contador-alertas {
+  position: static;
+  margin-left: auto;
 }
