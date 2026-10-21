@@ -587,3 +587,103 @@
   position: static;
   margin-left: auto;
 }
+
+/* ---------- Logo MotoraApp ---------- */
+.logo-caja {
+  display: inline-flex;
+  align-items: center;
+}
+
+.logo-caja img {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+/* ---------- Barra superior más alta, estilo portal (escritorio) ---------- */
+@media (min-width: 900px) {
+  .barra {
+    min-height: 120px;
+    padding: 10px 32px;
+  }
+
+  .marca {
+    gap: 22px;
+  }
+
+  .logo-caja img {
+    height: 100px;
+  }
+
+  .marca .taller {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding-left: 22px;
+    border-left: 1px solid var(--borde);
+  }
+
+  .u-nombre {
+    font-size: 1.05rem;
+  }
+
+  .menu {
+    top: 120px;
+    height: calc(100vh - 120px);
+  }
+}
+
+/* ---------- Nombre del taller centrado y rol como etiqueta ---------- */
+.barra {
+  position: sticky;
+}
+
+.taller-centro {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--texto);
+}
+
+.rol-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  font-size: 0.8rem;
+  color: var(--texto-medio);
+  white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+  .taller-centro {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 40%;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+  }
+
+  .taller-centro::after {
+    content: '';
+    display: block;
+    width: 56px;
+    height: 3px;
+    margin: 8px auto 0;
+    border-radius: 2px;
+    background: #f5b301;
+  }
+
+  .rol-chip {
+    font-size: 0.9rem;
+    padding: 6px 14px;
+  }
+}

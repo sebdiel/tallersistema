@@ -1,12 +1,10 @@
 @if (auth.usuario(); as u) {
   <header class="barra">
     <div class="marca">
-      <span class="logo">🔩</span>
-      <div>
-        <div class="nombre-app">TallerPro</div>
-        <div class="taller">{{ u.taller?.nombre ?? 'Administración global' }}</div>
-      </div>
+      <span class="logo-caja"><img class="logo-claro" src="logo-motoraapp.png" alt="MotoraApp" /><img class="logo-oscuro" src="logo-motoraapp-oscuro.png" alt="MotoraApp" /></span>
     </div>
+
+    <div class="taller-centro">{{ u.taller?.nombre ?? 'Administración global' }}</div>
 
     <div class="derecha">
       @if (u.rol !== 'SUPERADMIN') {
@@ -20,12 +18,7 @@
           }
         </a>
       }
-      <div class="usuario">
-        <div class="u-nombre">{{ u.nombre }}</div>
-        <div class="u-rol">{{ rolLabel[u.rol] }}</div>
-      </div>
-      <button class="btn btn-sec salir" (click)="cambiarTema()" [title]="tema() === 'claro' ? 'Tema industrial (oscuro)' : 'Tema claro'">{{ tema() === 'claro' ? '◐ Oscuro' : '◑ Claro' }}</button>
-      <button class="btn btn-sec salir" (click)="salir()" title="Cerrar sesión">Salir</button>
+      <span class="rol-chip" [title]="u.nombre">{{ rolLabel[u.rol] }}</span>
     </div>
   </header>
 

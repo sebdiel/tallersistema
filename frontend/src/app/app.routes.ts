@@ -174,7 +174,6 @@ export const routes: Routes = [
       },
       {
         path: 'configuracion',
-        canActivate: [rolGuard('ADMIN')],
         loadComponent: () =>
           import('./features/configuracion/configuracion.component').then(
             (m) => m.ConfiguracionComponent,

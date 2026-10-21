@@ -13,9 +13,7 @@ import { AuthService } from '../../core/auth.service';
     <div class="fondo">
       <form class="card caja" [formGroup]="form" (ngSubmit)="ingresar()">
         <div class="cabecera">
-          <div class="logo">🔩</div>
-          <h1>TallerPro</h1>
-          <p>Gestión operativa del taller mecánico</p>
+          <h1 class="marca-logo"><img class="logo-claro" src="logo-motoraapp.png" alt="MotoraApp – Gestión de talleres" /><img class="logo-oscuro" src="logo-motoraapp-oscuro.png" alt="MotoraApp – Gestión de talleres" /></h1>
         </div>
 
         @if (error()) {

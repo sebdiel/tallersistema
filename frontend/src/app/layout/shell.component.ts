@@ -29,7 +29,7 @@ const MENU: ItemMenu[] = [
   { ruta: '/indicadores', texto: 'Indicadores', icono: 'indicadores', roles: ['ADMIN'] },
   { ruta: '/notificaciones', texto: 'Notificaciones', icono: 'campana', roles: ['ADMIN', 'MECANICO'] },
   { ruta: '/clientes', texto: 'Clientes', icono: 'clientes', roles: ['ADMIN', 'MECANICO'] },
-  { ruta: '/configuracion', texto: 'Configuración', icono: 'configuracion', roles: ['ADMIN'] },
+  { ruta: '/configuracion', texto: 'Configuración', icono: 'configuracion', roles: ['SUPERADMIN', 'ADMIN', 'MECANICO'] },
   { ruta: '/usuarios', texto: 'Personal', icono: 'personal', roles: ['ADMIN'] },
   { ruta: '/sincronizacion', texto: 'Sincronización', icono: 'sincronizacion', roles: ['ADMIN', 'MECANICO'] },
 ];
@@ -51,20 +51,6 @@ export class ShellComponent {
 
   /** Hoja "Más" del menú inferior (móvil). */
   readonly masAbierto = signal(false);
-
-  /** Tema visual: claro ("Taller PWA Claro") o industrial (oscuro). */
-  readonly tema = signal<'claro' | 'industrial'>(
-    document.documentElement.dataset['tema'] === 'industrial' ? 'industrial' : 'claro',
-  );
-
-  cambiarTema(): void {
-    const nuevo = this.tema() === 'claro' ? 'industrial' : 'claro';
-    this.tema.set(nuevo);
-    document.documentElement.dataset['tema'] = nuevo;
-    try {
-      localStorage.setItem('tema', nuevo);
-    } catch {}
-  }
 
   // HU-03: el menú solo muestra lo que el rol puede usar.
   readonly menu = computed(() => {
@@ -118,8 +104,4 @@ export class ShellComponent {
       });
   }
 
-  async salir() {
-    await this.sync.limpiarCache();
-    this.auth.logout();
-  }
 }

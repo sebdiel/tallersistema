@@ -6,10 +6,12 @@ import { firstValueFrom } from 'rxjs';
 import { ServiciosApi, TallerApi } from '../../core/api.service';
 import { mensajeError } from '../../core/auth.interceptor';
 import { Servicio } from '../../core/models';
+import { AuthService } from '../../core/auth.service';
 import { SyncService } from '../../core/sync.service';
+import { TemaService } from '../../core/tema.service';
 import { IconoComponent } from '../../layout/icono.component';
 
-/** Configuración del taller (solo administrador). */
+/** Configuración: apariencia y sesión para todos; datos del taller solo para el administrador. */
 @Component({
   selector: 'app-configuracion',
   standalone: true,
@@ -18,8 +20,30 @@ import { IconoComponent } from '../../layout/icono.component';
     <div class="pagina">
       <div class="encabezado">
         <h1>Configuración</h1>
-        <a class="btn btn-sec" routerLink="/usuarios"><app-icono nombre="personal" /> Personal del taller</a>
+        @if (esAdmin) {
+          <a class="btn btn-sec" routerLink="/usuarios"><app-icono nombre="personal" /> Personal del taller</a>
+        }
       </div>
+
+      <section class="card">
+        <h2>Apariencia y sesión</h2>
+        <div class="fila-opcion">
+          <div>
+            <strong>Tema</strong>
+            <p class="item-sub">Actual: {{ temas.tema() === 'claro' ? 'Claro' : 'Oscuro (industrial)' }}</p>
+          </div>
+          <button class="btn btn-sec" (click)="temas.cambiar()">
+            {{ temas.tema() === 'claro' ? '◐ Cambiar a oscuro' : '◑ Cambiar a claro' }}
+          </button>
+        </div>
+        <div class="fila-opcion">
+          <div>
+            <strong>Cerrar sesión</strong>
+            <p class="item-sub">{{ auth.usuario()?.nombre }} · {{ auth.usuario()?.email }}</p>
+          </div>
+          <button class="btn btn-peligro" (click)="salir()">Salir</button>
+        </div>
+      </section>
 
       @if (error()) {
         <div class="alerta alerta-error">{{ error() }}</div>
@@ -28,6 +52,7 @@ import { IconoComponent } from '../../layout/icono.component';
         <div class="alerta alerta-info">{{ aviso() }}</div>
       }
 
+      @if (esAdmin) {
       <section class="card">
         <h2>Datos del taller</h2>
         <p class="item-sub" style="margin-top: 0">Aparecen en los comprobantes y presupuestos.</p>
@@ -113,9 +138,28 @@ import { IconoComponent } from '../../layout/icono.component';
           </div>
         </div>
       </section>
+      }
     </div>
   `,
   styles: `
+    .fila-opcion {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid var(--borde);
+    }
+    .fila-opcion:first-of-type {
+      border-top: none;
+    }
+    .fila-opcion p {
+      margin: 2px 0 0;
+    }
+    .btn-peligro {
+      background: var(--peligro);
+      color: #fff;
+    }
     .mini {
       width: 100%;
       min-height: 36px;
@@ -135,6 +179,9 @@ export class ConfiguracionComponent implements OnInit {
   private readonly tallerApi = inject(TallerApi);
   private readonly serviciosApi = inject(ServiciosApi);
   private readonly sync = inject(SyncService);
+  readonly auth = inject(AuthService);
+  readonly temas = inject(TemaService);
+  readonly esAdmin = this.auth.tieneRol('ADMIN');
 
   readonly servicios = signal<Servicio[]>([]);
   readonly editando = signal<string | null>(null);
@@ -146,7 +193,13 @@ export class ConfiguracionComponent implements OnInit {
   nuevo = { nombre: '', precio: null as number | null, horasEstimadas: null as number | null };
   form = { nombre: '', precio: 0, horasEstimadas: null as number | null };
 
+  async salir() {
+    await this.sync.limpiarCache();
+    this.auth.logout();
+  }
+
   async ngOnInit() {
+    if (!this.esAdmin) return;
     try {
       const t = await firstValueFrom(this.tallerApi.obtener());
       this.taller = { nombre: t.nombre, direccion: t.direccion ?? '', telefono: t.telefono ?? '' };
