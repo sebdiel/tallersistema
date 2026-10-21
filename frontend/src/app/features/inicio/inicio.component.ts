@@ -5,6 +5,8 @@ import { AuthService } from '../../core/auth.service';
 import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
 import { ESTADOS_ABIERTOS, ESTADO_INFO } from '../../core/estados';
+import { ROL_LABEL } from '../../core/models';
+import { SyncService } from '../../core/sync.service';
 import { IconoComponent } from '../../layout/icono.component';
 
 @Component({
@@ -14,7 +16,22 @@ import { IconoComponent } from '../../layout/icono.component';
   template: `
     <div class="pagina">
       <div class="encabezado">
-        <h1>Hola, {{ auth.usuario()?.nombre }}</h1>
+        <div>
+          <h1>Hola, {{ auth.usuario()?.nombre }}</h1>
+          <!-- Celular: estado de conexión y rol (en escritorio están en la barra superior) -->
+          <div class="chips-movil">
+            <a class="chip" routerLink="/sincronizacion" [class.offline]="!conexion.enLinea()">
+              <span class="punto"></span>
+              {{ conexion.enLinea() ? (sync.sincronizando() ? 'Sincronizando' : 'En línea') : 'Sin conexión' }}
+              @if (sync.pendientes()) {
+                · {{ sync.pendientes() }} pendiente(s)
+              }
+            </a>
+            @if (auth.usuario(); as u) {
+              <span class="chip">{{ rolLabel[u.rol] }}</span>
+            }
+          </div>
+        </div>
         @if (!auth.tieneRol('SUPERADMIN')) {
           <a class="btn" routerLink="/ordenes/nueva">+ Recibir vehículo</a>
         }
@@ -63,6 +80,36 @@ import { IconoComponent } from '../../layout/icono.component';
     </div>
   `,
   styles: `
+    .chips-movil {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--borde);
+      font-size: 0.8rem;
+      color: var(--texto-medio);
+    }
+    .punto {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+    .chip.offline .punto {
+      background: var(--peligro);
+    }
+    @media (min-width: 900px) {
+      .chips-movil {
+        display: none;
+      }
+    }
     .tablero {
       display: grid;
       gap: 12px;
@@ -113,6 +160,8 @@ import { IconoComponent } from '../../layout/icono.component';
 export class InicioComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly conexion = inject(ConexionService);
+  readonly sync = inject(SyncService);
+  readonly rolLabel = ROL_LABEL;
   private readonly datos = inject(DatosService);
 
   readonly estados = ESTADOS_ABIERTOS;

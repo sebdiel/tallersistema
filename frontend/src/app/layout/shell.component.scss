@@ -687,3 +687,27 @@
     padding: 6px 14px;
   }
 }
+
+/* ---------- Celular: logo + nombre del taller; estado y rol pasan a Inicio ---------- */
+@media (max-width: 899px) {
+  .barra .derecha {
+    display: none;
+  }
+
+  .marca {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .logo-caja img {
+    height: 44px;
+  }
+
+  .taller-centro {
+    text-align: left;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    padding-left: 12px;
+    border-left: 2px solid #f5b301;
+  }
+}
