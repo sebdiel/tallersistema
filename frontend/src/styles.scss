@@ -630,7 +630,7 @@ a.item:hover {
 }
 
 [data-tema='industrial'] body {
-  background: #0a0a0a;
+  background: var(--fondo);
 }
 
 [data-tema='industrial'] .btn,
@@ -697,14 +697,16 @@ a.item:hover {
   color: #f2c200;
 }
 
-/* Franja de advertencia amarillo/negro y hexágonos del diseño industrial */
+/* Franja de advertencia amarillo/negro del diseño industrial */
 [data-tema='industrial'] .barra {
   border-top: 6px solid transparent;
   border-image: repeating-linear-gradient(-45deg, #f2c200 0 9px, #141414 9px 18px) 6 0 0 0;
 }
 
-[data-tema='industrial'] body {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%23ffffff' fill-opacity='0.035' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/svg%3E");
+/* Fondo liso, del mismo color que la barra superior y el menú */
+body {
+  background-image: none;
+  background-color: var(--fondo);
 }
 
 /* Logo MotoraApp en la pantalla de ingreso */

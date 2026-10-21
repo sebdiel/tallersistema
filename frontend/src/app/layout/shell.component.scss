@@ -711,3 +711,16 @@
     border-left: 2px solid #f5b301;
   }
 }
+
+/* ---------- Menú lateral del mismo color que la barra superior ---------- */
+@media (min-width: 900px) {
+  .menu {
+    background: var(--fondo);
+    border-right: none;
+    box-shadow: none;
+  }
+
+  .menu a:hover:not(.activo) {
+    background: var(--superficie);
+  }
+}
