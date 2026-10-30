@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
@@ -222,7 +222,7 @@ const aIso = (d: Date) =>
     .rojo { color: #ef4444; }
   `,
 })
-export class InicioComponent implements OnInit {
+export class InicioComponent {
   readonly auth = inject(AuthService);
   readonly conexion = inject(ConexionService);
   readonly sync = inject(SyncService);
@@ -270,11 +270,13 @@ export class InicioComponent implements OnInit {
     return d === this.hoy ? `Hoy, ${texto}` : texto;
   });
 
-  async ngOnInit() {
+  // Se carga al entrar y se vuelve a cargar cada vez que termina una sincronización.
+  private readonly recargar = effect(() => {
+    this.sync.ultimaSync();
     if (this.auth.tieneRol('SUPERADMIN')) return;
     this.datos.resumenOrdenes().then((r) => this.resumen.set(r)).catch(() => {});
     this.datos.agendaEntregas().then((a) => this.agenda.set(a)).catch(() => {});
-  }
+  });
 
   corta(fecha: string) {
     return new Date(fecha + 'T12:00:00').toLocaleDateString('es-BO', { day: 'numeric', month: 'short' });
