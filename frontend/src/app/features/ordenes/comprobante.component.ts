@@ -64,6 +64,9 @@ import { IconoComponent } from '../../layout/icono.component';
             </div>
             <div>Kilometraje: {{ o.kilometrajeIngreso | number }} km</div>
             <div>Ingreso: {{ o.fechaIngreso | date: 'dd/MM/yyyy HH:mm' }}</div>
+            @if (esPresupuesto() && o.costoEstimado != null) {
+              <div>Costo estimado en la recepción: Bs {{ o.costoEstimado | number: '1.2-2' }}</div>
+            }
           </div>
         </section>
 

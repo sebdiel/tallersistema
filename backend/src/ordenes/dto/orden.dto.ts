@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDate,
+  Matches,
   IsEnum,
   IsInt,
   IsNumber,
@@ -52,9 +53,26 @@ export class CreateOrdenDto {
   @Type(() => Date)
   @IsDate()
   fechaIngreso?: Date;
+
+  /** RN-26: día de entrega acordado con el cliente (AAAA-MM-DD). */
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Fecha de entrega estimada inválida' })
+  fechaEntregaEstimada?: string | null;
+
+  /** RN-27: costo aproximado informado al cliente en la recepción (Bs). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  costoEstimado?: number | null;
 }
 
 export class UpdateOrdenDto {
+  /** RN-26: día de entrega acordado con el cliente (AAAA-MM-DD). */
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Fecha de entrega estimada inválida' })
+  fechaEntregaEstimada?: string | null;
+
   @Transform(trim)
   @IsOptional()
   @IsString()

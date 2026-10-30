@@ -1,13 +1,25 @@
-import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/auth.interceptor';
 import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
-import { Cliente, Persona, Vehiculo } from '../../core/models';
+import { Cliente, OrdenTrabajo, Vehiculo } from '../../core/models';
 import { IconoComponent } from '../../layout/icono.component';
 
 type Modo = 'existente' | 'nuevo';
+
+interface DiaAgenda {
+  fecha: string;
+  num: number;
+  semana: string;
+  mes: string;
+  ordenes: OrdenTrabajo[];
+}
+
+const aIso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const hoyLocal = () => aIso(new Date());
 
 /** HU-09: recepción del vehículo y apertura de la orden de trabajo. */
 @Component({
@@ -147,16 +159,36 @@ type Modo = 'existente' | 'nuevo';
             <label class="req" for="km">Kilometraje de ingreso</label>
             <input id="km" type="number" inputmode="numeric" min="0" formControlName="kilometrajeIngreso" />
           </div>
+          <!-- RN-27: lo que se le dijo al cliente "más o menos" -->
           <div class="campo">
-            <label for="mec">Mecánico asignado</label>
-            <select id="mec" formControlName="mecanicoId">
-              <option value="">Sin asignar</option>
-              @for (p of personal(); track p.id) {
-                <option [value]="p.id">{{ p.nombre }}</option>
-              }
-            </select>
+            <label for="costo">Costo estimado (Bs)</label>
+            <input id="costo" type="number" inputmode="decimal" min="0" step="0.01" formControlName="costoEstimado" placeholder="Opcional, ej.: 500" />
           </div>
         </div>
+        <!-- RN-26: fecha de entrega acordada con el cliente -->
+        <div class="campo" style="margin-top: 12px">
+          <label>¿Para cuándo lo necesita el cliente?</label>
+          <div class="calendario">
+            @for (d of dias(); track d.fecha) {
+              <button type="button" class="dia" [class.elegido]="entrega() === d.fecha"
+                [class.ocupado]="d.ordenes.length > 0" (click)="elegirDia(d)">
+                <span class="dsem">{{ d.semana }}</span>
+                <strong>{{ d.num }}</strong>
+                <span class="dmes">{{ d.mes }}</span>
+                <span class="destado">{{ d.ordenes.length ? d.ordenes.length + ' por entregar' : 'Libre' }}</span>
+              </button>
+            }
+          </div>
+          <div class="fila-fecha">
+            <span class="item-sub">Otra fecha:</span>
+            <input type="date" [min]="hoy" [value]="entrega() ?? ''" (change)="elegirFecha($any($event.target).value)" />
+            @if (entrega()) {
+              <span class="etiqueta-entrega">Entrega: {{ formatear(entrega()!) }}</span>
+              <button type="button" class="btn btn-sec" style="min-height: 32px" (click)="entrega.set(null)">Quitar</button>
+            }
+          </div>
+        </div>
+
         <div class="campo" style="margin-top: 12px">
           <label for="obs">Estado del vehículo al ingresar</label>
           <textarea id="obs" rows="2" formControlName="observacionesRecepcion" placeholder="Rayones, objetos dejados, nivel de combustible…"></textarea>
@@ -170,6 +202,50 @@ type Modo = 'existente' | 'nuevo';
         </div>
       </form>
     </div>
+
+    @if (confirmar(); as c) {
+      <div class="modal-velo">
+        <div class="modal-aviso" role="alertdialog" aria-modal="true">
+          <div class="modal-icono"><app-icono nombre="alerta" /></div>
+          <h2>Ese día ya tiene {{ c.ordenes.length }} vehículo(s) por entregar</h2>
+          <p>{{ formatear(c.fecha) }}</p>
+          <ul class="lista-ocupados">
+            @for (o of c.ordenes; track o.id) {
+              <li><span class="placa">{{ o.vehiculo?.placa }}</span> {{ o.vehiculo?.marca }} {{ o.vehiculo?.modelo }} · {{ o.cliente?.nombre }}</li>
+            }
+          </ul>
+          <p class="modal-nota">¿Puede entregar también este vehículo ese día?</p>
+          <button type="button" class="modal-boton" (click)="aceptarDia()">Sí, acepto esa fecha</button>
+          <button type="button" class="btn btn-sec" style="width: 100%; margin-top: 8px" (click)="confirmar.set(null)">Elegir otro día</button>
+        </div>
+      </div>
+    }
+  `,
+  styles: `
+    .calendario { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+    .dia { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px;
+      border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); font: inherit; cursor: pointer; }
+    .dia strong { font-size: 1.3rem; }
+    .dsem, .dmes { font-size: 0.72rem; text-transform: uppercase; color: var(--texto-suave); }
+    .destado { font-size: 0.7rem; color: #16a34a; font-weight: 600; }
+    .dia.ocupado { border-color: #d97706; }
+    .dia.ocupado .destado { color: #d97706; }
+    .dia.elegido { background: #f5b301; border-color: #f5b301; color: #1a1a1a; }
+    .dia.elegido .dsem, .dia.elegido .dmes, .dia.elegido .destado { color: #1a1a1a; }
+    .fila-fecha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+    .fila-fecha input { width: auto; }
+    .etiqueta-entrega { padding: 4px 10px; border-radius: 999px; background: #f5b30122; font-weight: 600; font-size: 0.85rem; }
+    .modal-velo { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+      padding: 16px; background: rgba(0, 0, 0, 0.6); }
+    .modal-aviso { width: 100%; max-width: 420px; padding: 24px; border-radius: 16px; background: var(--superficie);
+      color: var(--texto); text-align: center; border-top: 5px solid #f5b301; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
+    .modal-icono { font-size: 2.4rem; color: #f5b301; }
+    .modal-aviso h2 { margin: 6px 0; font-size: 1.1rem; }
+    .modal-nota { color: var(--texto-suave); font-size: 0.9rem; }
+    .modal-boton { width: 100%; margin-top: 10px; padding: 12px; border: none; border-radius: 10px; background: #f5b301;
+      color: #1a1a1a; font-weight: 700; font-size: 1rem; cursor: pointer; }
+    .lista-ocupados { list-style: none; padding: 0; margin: 10px 0; text-align: left; font-size: 0.9rem; }
+    .lista-ocupados li { padding: 6px 0; border-bottom: 1px solid var(--borde); }
   `,
 })
 export class OrdenNuevaComponent implements OnInit {
@@ -186,9 +262,29 @@ export class OrdenNuevaComponent implements OnInit {
   readonly vehiculo = signal<Vehiculo | null>(null);
   readonly vehiculos = signal<Vehiculo[]>([]);
   readonly clientes = signal<Cliente[]>([]);
-  readonly personal = signal<Persona[]>([]);
   readonly guardando = signal(false);
   readonly error = signal<string | null>(null);
+
+  // RN-26: agenda de entregas
+  readonly hoy = hoyLocal();
+  readonly entrega = signal<string | null>(null);
+  readonly agenda = signal<Record<string, OrdenTrabajo[]>>({});
+  readonly confirmar = signal<DiaAgenda | null>(null);
+  readonly dias = computed<DiaAgenda[]>(() => {
+    const ag = this.agenda();
+    return Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const fecha = aIso(d);
+      return {
+        fecha,
+        num: d.getDate(),
+        semana: i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-BO', { weekday: 'short' }),
+        mes: d.toLocaleDateString('es-BO', { month: 'short' }),
+        ordenes: ag[fecha] ?? [],
+      };
+    });
+  });
 
   readonly clienteId = this.fb.nonNullable.control('');
 
@@ -208,17 +304,37 @@ export class OrdenNuevaComponent implements OnInit {
   readonly form = this.fb.nonNullable.group({
     problemaReportado: ['', [Validators.required, Validators.minLength(5)]],
     kilometrajeIngreso: [0, [Validators.required, Validators.min(0)]],
-    mecanicoId: [''],
     observacionesRecepcion: [''],
+    costoEstimado: [null as number | null, Validators.min(0)],
   });
 
   async ngOnInit() {
-    this.personal.set(await this.datos.personal());
+    this.datos.agendaEntregas().then((a) => this.agenda.set(a)).catch(() => {});
     // ?placa=XXX preselecciona el vehículo (enlace desde la ficha del vehículo).
     const lista = await this.datos.buscarVehiculos(this.placa() ?? '');
     this.vehiculos.set(lista);
     const v = this.placa() ? lista.find((x) => x.placa === this.placa()) : undefined;
     if (v) this.elegirVehiculo(v);
+  }
+
+  elegirDia(d: DiaAgenda) {
+    if (d.ordenes.length) this.confirmar.set(d);
+    else this.entrega.set(d.fecha);
+  }
+
+  elegirFecha(fecha: string) {
+    if (!fecha) return this.entrega.set(null);
+    if (fecha < this.hoy) return this.error.set('La fecha de entrega no puede ser anterior a hoy');
+    this.elegirDia({ fecha, num: 0, semana: '', mes: '', ordenes: this.agenda()[fecha] ?? [] });
+  }
+
+  aceptarDia() {
+    this.entrega.set(this.confirmar()!.fecha);
+    this.confirmar.set(null);
+  }
+
+  formatear(fecha: string) {
+    return new Date(fecha + 'T12:00:00').toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   async buscarVehiculo(q: string) {
@@ -259,7 +375,7 @@ export class OrdenNuevaComponent implements OnInit {
       }
     }
     this.form.markAllAsTouched();
-    if (this.form.invalid) return this.error.set('Describa el problema y el kilometraje');
+    if (this.form.invalid) return this.error.set('Revise el problema, el kilometraje y el costo estimado');
 
     this.guardando.set(true);
     const f = this.form.getRawValue();
@@ -273,7 +389,8 @@ export class OrdenNuevaComponent implements OnInit {
         problemaReportado: f.problemaReportado,
         kilometrajeIngreso: Number(f.kilometrajeIngreso),
         observacionesRecepcion: f.observacionesRecepcion,
-        mecanicoId: f.mecanicoId || null,
+        fechaEntregaEstimada: this.entrega(),
+        costoEstimado: f.costoEstimado != null && String(f.costoEstimado) !== '' ? Number(f.costoEstimado) : null,
       });
       this.router.navigate(['/ordenes', orden.id]);
     } catch (err) {

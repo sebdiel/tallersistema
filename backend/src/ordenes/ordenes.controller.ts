@@ -60,7 +60,6 @@ export class OrdenesController {
   }
 
   @Patch(':id/mecanico')
-  @Roles(Rol.ADMIN)
   asignarMecanico(
     @CurrentUser() user: UsuarioActual,
     @Param('id', ParseUUIDPipe) id: string,

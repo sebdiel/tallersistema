@@ -211,6 +211,10 @@ export interface OrdenTrabajo {
   fechaIngreso: string;
   fechaTerminado: string | null;
   fechaEntrega: string | null;
+  /** RN-26: día de entrega acordado con el cliente (AAAA-MM-DD). */
+  fechaEntregaEstimada?: string | null;
+  /** RN-27: costo aproximado informado al cliente al recibir (Bs). */
+  costoEstimado?: number | null;
   vehiculo?: Vehiculo;
   cliente?: Cliente;
   mecanico?: Persona | null;

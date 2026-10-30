@@ -724,3 +724,19 @@
     background: var(--superficie);
   }
 }
+
+/* ---------- Menú lateral fijo: no se mueve al hacer scroll (escritorio) ---------- */
+@media (min-width: 900px) {
+  .menu {
+    position: fixed;
+    top: 120px;
+    left: 0;
+    bottom: 0;
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .contenido {
+    margin-left: 240px;
+  }
+}

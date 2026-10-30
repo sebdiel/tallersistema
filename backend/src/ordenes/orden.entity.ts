@@ -92,6 +92,14 @@ export class OrdenTrabajo extends BaseEntity {
   @Column({ name: 'fecha_entrega', type: 'timestamptz', nullable: true })
   fechaEntrega: Date | null;
 
+  /** RN-26: fecha de entrega acordada con el cliente (AAAA-MM-DD). */
+  @Column({ name: 'fecha_entrega_estimada', type: 'date', nullable: true })
+  fechaEntregaEstimada: string | null;
+
+  /** RN-27: costo aproximado que se le dijo al cliente al recibir el vehículo (Bs). */
+  @Column({ name: 'costo_estimado', type: 'numeric', precision: 10, scale: 2, nullable: true, transformer: numeric })
+  costoEstimado: number | null;
+
   /** RN-16: descuento en Bs, solo lo aplica el administrador. */
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, transformer: numeric })
   descuento: number;

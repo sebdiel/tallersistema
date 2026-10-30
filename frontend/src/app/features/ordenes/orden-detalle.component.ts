@@ -35,6 +35,12 @@ import {
   imports: [IconoComponent, RouterLink, FormsModule, DatePipe, DecimalPipe],
   templateUrl: './orden-detalle.component.html',
   styles: `
+    .pasos { display: flex; gap: 4px; margin-bottom: 16px; overflow-x: auto; }
+    .paso { flex: 1; min-width: 90px; text-align: center; font-size: 0.8rem; color: var(--texto-suave);
+      padding-top: 8px; border-top: 4px solid var(--borde); }
+    .paso.hecho { border-top-color: #a37a00; color: var(--texto); }
+    .paso.actual { border-top-color: #f5b301; color: #f5b301; font-weight: 700; }
+    .paso b { display: block; font-size: 0.95rem; }
     .cabecera-ot {
       display: flex;
       flex-wrap: wrap;
@@ -127,6 +133,16 @@ export class OrdenDetalleComponent implements OnInit {
     const e = this.orden()?.estado;
     return !!e && ESTADOS_ABIERTOS.includes(e);
   });
+
+  /** La página muestra solo lo que corresponde al paso actual de la orden. */
+  readonly pasos = ['Recibido', 'Diagnóstico', 'Reparación', 'Terminado', 'Entregado'];
+  readonly pasoActual = computed(() =>
+    ['RECIBIDO', 'EN_DIAGNOSTICO', 'EN_REPARACION', 'TERMINADO', 'ENTREGADO'].indexOf(this.orden()?.estado ?? ''),
+  );
+  /** Diagnóstico, repuestos y mano de obra: se trabajan en diagnóstico y reparación. */
+  readonly enTrabajo = computed(() => this.pasoActual() === 1 || this.pasoActual() === 2);
+  /** Ya pasó la etapa de trabajo (terminado, entregado o cancelado con costos). */
+  readonly despuesTrabajo = computed(() => !this.enTrabajo() && this.orden()?.estado !== 'RECIBIDO');
   repuestoElegido() {
     return this.repuestos().find((r) => r.id === this.repuestoId);
   }

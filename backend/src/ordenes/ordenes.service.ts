@@ -184,6 +184,8 @@ export class OrdenesService {
         observacionesRecepcion: dto.observacionesRecepcion ?? null,
         kilometrajeIngreso: dto.kilometrajeIngreso,
         fechaIngreso,
+        fechaEntregaEstimada: validarEntregaEstimada(dto.fechaEntregaEstimada, fechaIngreso),
+        costoEstimado: dto.costoEstimado ?? null,
       });
       await m.insert(OrdenTrabajo, orden);
       await m.insert(HistorialEstado, {
@@ -217,6 +219,9 @@ export class OrdenesService {
       if (dto.sinRepuestos) {
         const usados = await m.count(OrdenRepuesto, { where: { ordenId: id } });
         if (usados > 0) throw new BadRequestException('La orden ya tiene repuestos registrados');
+      }
+      if (dto.fechaEntregaEstimada !== undefined) {
+        dto.fechaEntregaEstimada = validarEntregaEstimada(dto.fechaEntregaEstimada, orden.fechaIngreso);
       }
       if (Object.keys(dto).length > 0) await m.update(OrdenTrabajo, id, { ...dto });
     });
@@ -589,6 +594,14 @@ export class OrdenesService {
  * Las fechas enviadas desde el dispositivo (modo offline) se aceptan si no
  * están en el futuro ni antes del evento anterior; si no, se usa la del servidor.
  */
+/** RN-26: la entrega estimada no puede ser anterior al ingreso. */
+function validarEntregaEstimada(fecha: string | null | undefined, ingreso: Date): string | null {
+  if (!fecha) return null;
+  const dia = new Date(ingreso.getTime() - 4 * 3_600_000).toISOString().slice(0, 10);
+  if (fecha < dia) throw new BadRequestException('La fecha de entrega no puede ser anterior a la de recepción');
+  return fecha;
+}
+
 function fechaValida(fecha?: Date, minimo?: Date): Date {
   const ahora = new Date();
   if (!fecha || isNaN(fecha.getTime()) || fecha > ahora) return ahora;

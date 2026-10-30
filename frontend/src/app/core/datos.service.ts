@@ -38,6 +38,8 @@ export interface NuevaOrden {
   kilometrajeIngreso: number;
   observacionesRecepcion?: string | null;
   mecanicoId?: string | null;
+  fechaEntregaEstimada?: string | null;
+  costoEstimado?: number | null;
 }
 
 const uuid = () => crypto.randomUUID();
@@ -169,6 +171,16 @@ export class DatosService {
     return db.personal.toArray();
   }
 
+  /** RN-26: vehículos con entrega comprometida por día (órdenes abiertas). Funciona sin conexión. */
+  async agendaEntregas(): Promise<Record<string, OrdenTrabajo[]>> {
+    const abiertas = await this.listarOrdenes({ abiertas: true });
+    const agenda: Record<string, OrdenTrabajo[]> = {};
+    for (const o of abiertas) {
+      if (o.fechaEntregaEstimada) (agenda[o.fechaEntregaEstimada] ??= []).push(o);
+    }
+    return agenda;
+  }
+
   async resumenOrdenes(): Promise<Record<string, number>> {
     const abiertas = await this.listarOrdenes({ abiertas: true });
     return Object.fromEntries(
@@ -282,6 +294,8 @@ export class DatosService {
       fechaIngreso: fecha,
       fechaTerminado: null,
       fechaEntrega: null,
+      fechaEntregaEstimada: d.fechaEntregaEstimada ?? null,
+      costoEstimado: d.costoEstimado ?? null,
       vehiculo: { ...vehiculo, kilometraje: d.kilometrajeIngreso },
       cliente,
       mecanico,
@@ -300,6 +314,8 @@ export class DatosService {
         observacionesRecepcion: orden.observacionesRecepcion,
         mecanicoId: orden.mecanicoId,
         fechaIngreso: fecha,
+        fechaEntregaEstimada: orden.fechaEntregaEstimada,
+        costoEstimado: orden.costoEstimado,
       },
       descripcion: `Recibir ${vehiculo.placa}`,
     });

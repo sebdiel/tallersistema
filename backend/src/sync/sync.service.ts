@@ -134,7 +134,6 @@ export class SyncService {
       case 'orden.actualizar':
         return this.ordenes.actualizar(user, ref(), await validar(UpdateOrdenDto, op.datos));
       case 'orden.mecanico':
-        if (user.rol !== Rol.ADMIN) throw new ForbiddenException('Solo el administrador asigna mecánicos');
         return this.ordenes.asignarMecanico(user, ref(), await validar(AsignarMecanicoDto, op.datos));
       case 'orden.estado':
         return this.ordenes.cambiarEstado(user, ref(), await validar(CambiarEstadoDto, op.datos));

@@ -24,6 +24,17 @@
       <div class="alerta alerta-warn">{{ aviso() }}</div>
     }
 
+    <!-- Pasos de la orden -->
+    @if (pasoActual() >= 0) {
+      <div class="pasos">
+        @for (p of pasos; track p; let i = $index) {
+          <div class="paso" [class.hecho]="i < pasoActual()" [class.actual]="i === pasoActual()">
+            <b>{{ i + 1 }}</b>{{ p }}
+          </div>
+        }
+      </div>
+    }
+
     <!-- Avance de estado (máquina de estados) -->
     @if (siguientes().length) {
       <section class="card">
@@ -87,6 +98,10 @@
           <dd>{{ o.kilometrajeIngreso | number }} km</dd>
           <dt>Problema</dt>
           <dd>{{ o.problemaReportado }}</dd>
+          @if (o.costoEstimado != null) {
+            <dt>Costo estimado</dt>
+            <dd>Bs {{ o.costoEstimado | number: '1.2-2' }} <span class="item-sub">(aprox. dicho al cliente)</span></dd>
+          }
           @if (o.observacionesRecepcion) {
             <dt>Observaciones</dt>
             <dd>{{ o.observacionesRecepcion }}</dd>
@@ -97,7 +112,7 @@
       <!-- Mecánico + diagnóstico -->
       <section class="card">
         <h2>Mecánico</h2>
-        @if (auth.tieneRol('ADMIN') && editable()) {
+        @if (editable()) {
           <select class="buscador" [ngModel]="o.mecanicoId ?? ''" (ngModelChange)="asignar($event)" [disabled]="procesando()">
             <option value="">Sin asignar</option>
             @for (p of personal(); track p.id) {
@@ -108,6 +123,12 @@
           <p style="margin: 0">{{ o.mecanico?.nombre ?? 'Sin asignar' }}</p>
         }
 
+        @if (o.estado === 'RECIBIDO') {
+          <p class="item-sub" style="margin-top: 16px">
+            Asigne el mecánico y presione <strong>Iniciar diagnóstico</strong> para registrar qué tiene el vehículo,
+            los repuestos y la mano de obra.
+          </p>
+        } @else {
         <h2 style="margin-top: 16px">Diagnóstico</h2>
         @if (editable()) {
           <textarea class="buscador" rows="4" [(ngModel)]="diagnostico" placeholder="Qué encontró el mecánico y qué se hará"></textarea>
@@ -119,10 +140,12 @@
         } @else {
           <p style="margin: 0">{{ o.diagnostico || '—' }}</p>
         }
+        }
       </section>
     </div>
 
-    <!-- Repuestos utilizados -->
+    <!-- Repuestos utilizados: en diagnóstico/reparación, o como resumen si tiene -->
+    @if (enTrabajo() || o.repuestos?.length) {
     <section class="card">
       <h2>Repuestos utilizados</h2>
       @if (o.repuestos?.length) {
@@ -209,8 +232,10 @@
         </div>
       }
     </section>
+    }
 
     <!-- HU-18: mano de obra -->
+    @if (enTrabajo() || o.manoObra?.length) {
     <section class="card">
       <h2>Mano de obra</h2>
       @if (o.manoObra?.length) {
@@ -244,7 +269,7 @@
         <p class="item-sub">No hay mano de obra registrada.</p>
       }
 
-      @if (costosEditables()) {
+      @if (costosEditables() && enTrabajo()) {
         <div class="grid-2" style="margin-top: 12px">
           <div class="campo">
             <label for="srv">Servicio del catálogo</label>
@@ -271,9 +296,11 @@
         </div>
       }
     </section>
+    }
 
     <!-- HU-19 / HU-21: costos y pagos -->
     @if (totales(); as t) {
+      @if (o.estado !== 'RECIBIDO' || o.pagos?.length) {
       <section class="card">
         <h2>Costo y pagos</h2>
         <dl class="datos">
@@ -374,6 +401,7 @@
           </div>
         }
       </section>
+      }
     }
 
     <!-- Historial de estados -->
