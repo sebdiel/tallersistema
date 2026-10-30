@@ -1,11 +1,10 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/auth.interceptor';
 import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
-import { Cliente, OrdenTrabajo, Repuesto, Servicio, Vehiculo } from '../../core/models';
+import { Cliente, OrdenTrabajo, Vehiculo } from '../../core/models';
 import { IconoComponent } from '../../layout/icono.component';
 
 type Modo = 'existente' | 'nuevo';
@@ -26,7 +25,7 @@ const hoyLocal = () => aIso(new Date());
 @Component({
   selector: 'app-orden-nueva',
   standalone: true,
-  imports: [IconoComponent, ReactiveFormsModule, RouterLink, DecimalPipe],
+  imports: [IconoComponent, ReactiveFormsModule, RouterLink],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -124,73 +123,6 @@ const hoyLocal = () => aIso(new Date());
           <textarea id="problema" rows="3" formControlName="problemaReportado" placeholder="Ej.: ruido al frenar, cambio de aceite"></textarea>
         </div>
 
-        <!-- RN-33: servicios y repuestos del catálogo como motivo de ingreso -->
-        <div class="campo" style="margin-top: 12px">
-          <label for="sug">Agregar servicio o repuesto</label>
-          <input id="sug" class="buscador" placeholder="Escriba, ej.: cambio, aceite, pastillas…" [value]="busquedaItem()"
-            (input)="buscarItem($any($event.target).value)" autocomplete="off" />
-          @if (busquedaItem().trim().length >= 2) {
-            <div class="sugerencias">
-              <div class="sug-cab">Sugerencias</div>
-              @for (s of sugServicios(); track s.id) {
-                <button type="button" class="sug" (click)="agregarItem('SERVICIO', s.id, s.nombre, s.precio)">
-                  <span class="sug-nombre">{{ s.nombre }}</span>
-                  <span class="pill servicio">Servicio</span>
-                  <span class="pill precio">Bs {{ s.precio | number: '1.2-2' }}</span>
-                </button>
-              }
-              @for (r of sugRepuestos(); track r.id) {
-                <button type="button" class="sug" (click)="agregarItem('REPUESTO', r.id, r.nombre, r.precioVenta)">
-                  <span class="sug-nombre">{{ r.nombre }} <small>{{ r.codigo }}</small></span>
-                  <span class="pill repuesto">Repuesto</span>
-                  <span class="pill precio">Bs {{ r.precioVenta | number: '1.2-2' }}</span>
-                  <span class="pill" [class.sin-stock]="r.stock <= 0">Stock: {{ r.stock }}</span>
-                </button>
-              }
-              @if (!sugServicios().length && !sugRepuestos().length) {
-                <p class="item-sub" style="margin: 8px">No está en Servicios ni en Inventario.</p>
-              }
-              <div class="sug-nuevo">
-                <span>Agregar <strong>«{{ busquedaItem().trim() }}»</strong> como ítem nuevo:</span>
-                <button type="button" class="btn btn-sec" (click)="agregarLibre('SERVICIO')">+ Trabajo</button>
-                <button type="button" class="btn btn-sec" (click)="agregarLibre('REPUESTO')">+ Repuesto</button>
-              </div>
-            </div>
-          }
-          @if (items().length) {
-            <ul class="items-elegidos">
-              @for (it of items(); track it.id) {
-                <li class="item-elegido">
-                  <div class="fila-item">
-                    <span class="pill" [class.servicio]="it.tipo === 'SERVICIO'" [class.repuesto]="it.tipo === 'REPUESTO'">
-                      {{ it.tipo === 'SERVICIO' ? 'Trabajo' : 'Repuesto' }}{{ it.libre ? ' nuevo' : '' }}
-                    </span>
-                    <span class="sug-nombre">{{ it.nombre }}</span>
-                    <strong class="num">Bs {{ it.precio * it.cantidad | number: '1.2-2' }}</strong>
-                  </div>
-                  <div class="fila-item">
-                    <label class="valor-u">Valor/u (Bs)
-                      <input type="number" min="0" step="0.5" inputmode="decimal" [value]="it.precio"
-                        [disabled]="it.tipo === 'REPUESTO' && !it.libre"
-                        [title]="it.tipo === 'REPUESTO' && !it.libre ? 'Precio del inventario' : ''"
-                        (input)="cambiarPrecio(it.id, +$any($event.target).value)" />
-                    </label>
-                    <div class="contador">
-                      <button type="button" (click)="cambiarCantidad(it.id, it.cantidad - 1)" [disabled]="it.cantidad <= 1">−</button>
-                      <span>{{ it.cantidad }}</span>
-                      <button type="button" (click)="cambiarCantidad(it.id, it.cantidad + 1)">+</button>
-                    </div>
-                    <button type="button" class="quitar" (click)="quitarItem(it.id)" aria-label="Quitar"><app-icono nombre="quitar" /></button>
-                  </div>
-                </li>
-              }
-              <li class="total-items">
-                <span>Total sugerido</span>
-                <strong class="num">Bs {{ totalItems() | number: '1.2-2' }}</strong>
-              </li>
-            </ul>
-          }
-        </div>
         <div class="grid-2" style="margin-top: 12px">
           <div class="campo">
             <label class="req" for="km">Kilometraje de ingreso</label>
@@ -327,37 +259,6 @@ const hoyLocal = () => aIso(new Date());
     }
   `,
   styles: `
-    .sugerencias { margin-top: 6px; padding: 6px; border: 1px solid #f5b301; border-radius: 12px; background: var(--superficie);
-      max-height: 280px; overflow-y: auto; }
-    .sug-cab { padding: 4px 8px; font-size: 0.8rem; color: var(--texto-suave); }
-    .sug { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; margin-top: 6px; padding: 10px 12px;
-      border: 1px solid var(--borde); border-radius: 10px; background: transparent; color: var(--texto); font: inherit;
-      text-align: left; cursor: pointer; }
-    .sug:hover { border-color: #f5b301; background: #f5b30110; }
-    .sug-nombre { flex: 1 1 160px; font-weight: 600; }
-    .sug-nombre small { color: var(--texto-suave); font-weight: 400; }
-    .pill { padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #ffffff14; }
-    .pill.precio { background: #16a34a26; color: #4ade80; }
-    .pill.servicio { background: #f5b30126; color: #f5b301; }
-    .pill.repuesto { background: #3b82f626; color: #60a5fa; }
-    .pill.sin-stock { background: #ef444426; color: #f87171; }
-    .items-elegidos { list-style: none; margin: 10px 0 0; padding: 0; border: 1px solid var(--borde); border-radius: 12px; }
-    .items-elegidos li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--borde); }
-    .items-elegidos li:last-child { border-bottom: none; }
-    .items-elegidos li.item-elegido { flex-direction: column; align-items: stretch; gap: 8px; }
-    .fila-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .valor-u { display: flex; align-items: center; gap: 8px; flex: 1 1 200px; font-size: 0.85rem; color: var(--texto-suave); }
-    .valor-u input { flex: 1; min-height: 34px; padding: 2px 8px; }
-    .contador { display: inline-flex; align-items: center; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
-    .contador button { width: 34px; height: 34px; border: none; background: #f5b301; color: #1a1a1a; font-size: 1.1rem; font-weight: 800; cursor: pointer; }
-    .contador button:disabled { opacity: 0.4; cursor: default; }
-    .contador span { min-width: 36px; text-align: center; font-weight: 700; }
-    .sug-nuevo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 12px;
-      border-top: 1px dashed var(--borde); }
-    .sug-nuevo span { flex: 1 1 200px; }
-    .items-elegidos .quitar { display: inline-flex; padding: 4px; border: none; background: transparent; color: var(--texto-suave); cursor: pointer; }
-    .items-elegidos .quitar:hover { color: #ef4444; }
-    .total-items { justify-content: space-between; background: #f5b30112; }
     .modal-form { width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; padding: 22px; border-radius: 16px;
       background: var(--superficie); color: var(--texto); border-top: 5px solid #f5b301; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); }
     .modal-form-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -434,17 +335,6 @@ export class OrdenNuevaComponent implements OnInit {
     });
   });
 
-  // RN-33: servicios y repuestos elegidos como motivo de ingreso
-  readonly busquedaItem = signal('');
-  readonly sugServicios = signal<Servicio[]>([]);
-  readonly sugRepuestos = signal<Repuesto[]>([]);
-  /** libre: no está en el catálogo (trabajo → mano de obra; repuesto → repuesto externo del taller). */
-  readonly items = signal<
-    { tipo: 'SERVICIO' | 'REPUESTO'; id: string; nombre: string; precio: number; cantidad: number; libre?: boolean }[]
-  >([]);
-  readonly totalItems = computed(() => this.items().reduce((s, it) => s + it.precio * it.cantidad, 0));
-  private servicios: Servicio[] = [];
-
   readonly clienteId = this.fb.nonNullable.control('');
 
   readonly nuevo = this.fb.nonNullable.group({
@@ -469,62 +359,11 @@ export class OrdenNuevaComponent implements OnInit {
 
   async ngOnInit() {
     this.datos.agendaEntregas().then((a) => this.agenda.set(a)).catch(() => {});
-    this.datos.servicios().then((s) => (this.servicios = s.filter((x) => x.activo !== false))).catch(() => {});
     // ?placa=XXX preselecciona el vehículo (enlace desde la ficha del vehículo).
     const lista = await this.datos.buscarVehiculos(this.placa() ?? '');
     this.vehiculos.set(lista);
     const v = this.placa() ? lista.find((x) => x.placa === this.placa()) : undefined;
     if (v) this.elegirVehiculo(v);
-  }
-
-  async buscarItem(q: string) {
-    this.busquedaItem.set(q);
-    const t = q.trim().toLowerCase();
-    if (t.length < 2) return;
-    this.sugServicios.set(this.servicios.filter((s) => s.nombre.toLowerCase().includes(t)).slice(0, 6));
-    try {
-      this.sugRepuestos.set((await this.datos.buscarRepuestos(q.trim())).slice(0, 6));
-    } catch {
-      this.sugRepuestos.set([]);
-    }
-  }
-
-  agregarItem(tipo: 'SERVICIO' | 'REPUESTO', id: string, nombre: string, precio: number) {
-    const ya = this.items().find((it) => it.id === id);
-    if (ya) this.cambiarCantidad(id, ya.cantidad + 1);
-    else this.items.update((l) => [...l, { tipo, id, nombre, precio, cantidad: 1 }]);
-    this.busquedaItem.set('');
-    this.actualizarCosto();
-  }
-
-  agregarLibre(tipo: 'SERVICIO' | 'REPUESTO') {
-    const nombre = this.busquedaItem().trim();
-    if (nombre.length < 3) return this.error.set('Escriba el nombre del ítem (mínimo 3 letras)');
-    this.items.update((l) => [...l, { tipo, id: crypto.randomUUID(), nombre, precio: 0, cantidad: 1, libre: true }]);
-    this.busquedaItem.set('');
-    this.actualizarCosto();
-  }
-
-  cambiarPrecio(id: string, precio: number) {
-    if (!(precio >= 0)) return;
-    this.items.update((l) => l.map((it) => (it.id === id ? { ...it, precio } : it)));
-    this.actualizarCosto();
-  }
-
-  cambiarCantidad(id: string, cantidad: number) {
-    if (!(cantidad > 0)) return;
-    this.items.update((l) => l.map((it) => (it.id === id ? { ...it, cantidad } : it)));
-    this.actualizarCosto();
-  }
-
-  quitarItem(id: string) {
-    this.items.update((l) => l.filter((it) => it.id !== id));
-    this.actualizarCosto();
-  }
-
-  /** El costo estimado se llena con la suma de lo elegido (se puede corregir a mano). */
-  private actualizarCosto() {
-    this.form.controls.costoEstimado.setValue(this.items().length ? Math.round(this.totalItems() * 100) / 100 : null);
   }
 
   elegirDia(d: DiaAgenda) {
@@ -628,29 +467,7 @@ export class OrdenNuevaComponent implements OnInit {
         observacionesRecepcion: f.observacionesRecepcion,
         fechaEntregaEstimada: this.entrega(),
         costoEstimado: f.costoEstimado != null && String(f.costoEstimado) !== '' ? Number(f.costoEstimado) : null,
-        repuestosSugeridos: this.items()
-          .filter((it) => it.tipo === 'REPUESTO' && !it.libre)
-          .map((it) => ({ repuestoId: it.id, nombre: it.nombre, cantidad: it.cantidad })),
       });
-      // RN-33: los trabajos quedan como mano de obra y los repuestos nuevos como repuestos externos del taller.
-      let actual = orden;
-      for (const it of this.items().filter((x) => x.tipo === 'SERVICIO' || x.libre)) {
-        if (it.tipo === 'SERVICIO') {
-          await this.datos.agregarManoObra(actual, {
-            servicioId: it.libre ? null : it.id,
-            descripcion: it.cantidad > 1 ? `${it.nombre} (x${it.cantidad})` : it.nombre,
-            monto: it.precio * it.cantidad,
-          });
-        } else {
-          await this.datos.agregarRepuestoExterno(actual, {
-            descripcion: it.nombre,
-            cantidad: it.cantidad,
-            origen: 'TALLER',
-            precioUnitario: it.precio,
-          });
-        }
-        actual = await this.datos.obtenerOrden(orden.id);
-      }
       this.router.navigate(['/ordenes', orden.id]);
     } catch (err) {
       this.error.set(mensajeError(err));

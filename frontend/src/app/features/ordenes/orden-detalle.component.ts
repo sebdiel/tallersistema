@@ -66,6 +66,12 @@ import {
     .cerrar { display: inline-flex; padding: 6px; border: none; border-radius: 8px; background: transparent;
       color: var(--texto-suave); font-size: 1.2rem; cursor: pointer; }
     .cerrar:hover { color: var(--texto); background: #ffffff12; }
+    .sugerencias { margin-top: 6px; padding: 4px 6px 6px; border: 1px solid #f5b301; border-radius: 12px; max-height: 240px; overflow-y: auto; }
+    .sug { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--borde);
+      border-radius: 10px; background: transparent; color: var(--texto); font: inherit; text-align: left; cursor: pointer; }
+    .sug:hover { border-color: #f5b301; background: #f5b30110; }
+    .sug-nombre { flex: 1; font-weight: 600; }
+    .pill.precio { padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #16a34a26; color: #4ade80; }
     .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
     .cambio { color: #f5b301; }
     .diferencia { color: #16a34a; }
@@ -207,10 +213,10 @@ export class OrdenDetalleComponent implements OnInit {
 
   // ---------------------------------------------------------------- acciones
 
-  /** Pasos hacia atrás (reabrir reparación, volver a diagnóstico): piden motivo. */
+  /** Reabrir una orden terminada requiere indicar el motivo. */
   esRetroceso(destino: EstadoOrden) {
     const e = this.orden()?.estado;
-    return (e === 'TERMINADO' && destino === 'EN_REPARACION') || (e === 'EN_REPARACION' && destino === 'EN_DIAGNOSTICO');
+    return e === 'TERMINADO' && destino === 'EN_REPARACION';
   }
 
   cambiarEstado(destino: EstadoOrden) {
@@ -291,6 +297,12 @@ export class OrdenDetalleComponent implements OnInit {
   elegirServicio(id: string) {
     const s = this.servicios().find((x) => x.id === id);
     this.mo = { servicioId: id, descripcion: s?.nombre ?? '', monto: s?.precio ?? null };
+  }
+
+  /** Servicios del catálogo que coinciden con lo escrito en la mano de obra. */
+  serviciosQueCoinciden() {
+    const t = this.mo.descripcion.trim().toLowerCase();
+    return this.servicios().filter((x) => x.nombre.toLowerCase().includes(t)).slice(0, 6);
   }
 
   async agregarManoObra() {

@@ -93,7 +93,7 @@ import { IconoComponent } from '../../layout/icono.component';
         </section>
 
         <div class="acciones">
-          <a class="btn btn-sec" [routerLink]="['/vehiculos', f.vehiculo.id, 'editar']">Editar ficha</a>
+          <a class="btn btn-sec" [routerLink]="['/vehiculos', f.vehiculo.id, 'editar']">Editar vehículo</a>
           <a class="btn" routerLink="/ordenes/nueva" [queryParams]="{ placa: f.vehiculo.placa }">Recibir vehículo</a>
         </div>
       } @else if (!error()) {

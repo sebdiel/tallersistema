@@ -173,6 +173,9 @@ export class ServiciosApi {
   listar(inactivos = false) {
     return this.http.get<Servicio[]>(this.url, { params: { inactivos } });
   }
+  frecuentes() {
+    return this.http.get<{ nombre: string; frecuencia: number; precio_sugerido: number }[]>(`${this.url}/frecuentes`);
+  }
   crear(data: Partial<Servicio>) {
     return this.http.post<Servicio>(this.url, data);
   }

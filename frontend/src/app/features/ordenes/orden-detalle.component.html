@@ -49,8 +49,6 @@
             >
               @if (o.estado === 'TERMINADO' && destino === 'EN_REPARACION') {
                 ← Reabrir reparación
-              } @else if (o.estado === 'EN_REPARACION' && destino === 'EN_DIAGNOSTICO') {
-                ← Volver a diagnóstico
               } @else {
                 {{ accionTexto[destino] }}
               }
@@ -64,7 +62,6 @@
               @switch (destino) {
                 @case ('CANCELADO') { Motivo de la cancelación }
                 @case ('ENTREGADO') { Entrega a crédito (saldo Bs {{ totales()?.saldo | number: '1.2-2' }}): comentario }
-                @case ('EN_DIAGNOSTICO') { ¿Qué falla nueva se encontró? (se rehace el presupuesto) }
                 @default { Motivo para reabrir }
               }
             </label>
@@ -677,18 +674,25 @@
               <div class="alerta alerta-error">{{ error() }}</div>
             }
         <div class="grid-2" style="margin-top: 12px">
-          <div class="campo">
-            <label for="srv">Servicio del catálogo</label>
-            <select id="srv" [ngModel]="mo.servicioId" (ngModelChange)="elegirServicio($event)">
-              <option value="">— Trabajo libre —</option>
-              @for (s of servicios(); track s.id) {
-                <option [value]="s.id">{{ s.nombre }} — Bs {{ s.precio | number: '1.2-2' }}</option>
-              }
-            </select>
-          </div>
-          <div class="campo">
-            <label for="mod">Descripción</label>
-            <input id="mod" [(ngModel)]="mo.descripcion" placeholder="Trabajo realizado" />
+          <div class="campo" style="grid-column: 1 / -1">
+            <label for="mod">Trabajo</label>
+            <input id="mod" class="buscador" [(ngModel)]="mo.descripcion" (ngModelChange)="mo.servicioId = ''"
+              placeholder="Escriba, ej.: cambio de aceite, alineado…" autocomplete="off" />
+            @if (mo.descripcion.trim().length >= 2 && !mo.servicioId) {
+              <div class="sugerencias">
+                @for (s of serviciosQueCoinciden(); track s.id) {
+                  <button type="button" class="sug" (click)="elegirServicio(s.id)">
+                    <span class="sug-nombre">{{ s.nombre }}</span>
+                    <span class="pill precio">Bs {{ s.precio | number: '1.2-2' }}</span>
+                  </button>
+                } @empty {
+                  <p class="item-sub" style="margin: 6px 8px">No está en el catálogo: se agregará como trabajo libre con el monto que indique.</p>
+                }
+              </div>
+            }
+            @if (mo.servicioId) {
+              <span class="item-sub">Del catálogo de servicios · puede ajustar el monto</span>
+            }
           </div>
           <div class="campo">
             <label for="mom">Monto (Bs)</label>

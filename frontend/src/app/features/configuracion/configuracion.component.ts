@@ -138,6 +138,27 @@ import { IconoComponent } from '../../layout/icono.component';
           </div>
         </div>
       </section>
+
+      <section class="card">
+        <h2>Reparaciones frecuentes para agregar</h2>
+        <p class="item-sub" style="margin-top: 0">Sugerencias basadas en mano de obra libre repetida en órdenes anteriores. Revise el precio promedio antes de añadirlas al catálogo.</p>
+        <input class="buscador" [(ngModel)]="filtroFrecuentes" placeholder="Filtrar reparaciones frecuentes…" />
+        <table class="tabla">
+          <thead><tr><th>Reparación</th><th>Veces</th><th>Precio sugerido (Bs)</th><th></th></tr></thead>
+          <tbody>
+            @for (s of frecuentesFiltrados(); track s.nombre) {
+              <tr>
+                <td>{{ s.nombre }}</td>
+                <td>{{ s.frecuencia }}</td>
+                <td><input class="mini num" type="number" min="0" step="0.01" [(ngModel)]="s.precioSugerido" /></td>
+                <td class="num"><button class="btn" [disabled]="procesando()" (click)="agregarFrecuente(s)">Agregar al catálogo</button></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="vacio">No hay reparaciones frecuentes pendientes de agregar.</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
       }
     </div>
   `,
@@ -184,6 +205,8 @@ export class ConfiguracionComponent implements OnInit {
   readonly esAdmin = this.auth.tieneRol('ADMIN');
 
   readonly servicios = signal<Servicio[]>([]);
+  readonly frecuentes = signal<{ nombre: string; frecuencia: number; precioSugerido: number }[]>([]);
+  filtroFrecuentes = '';
   readonly editando = signal<string | null>(null);
   readonly procesando = signal(false);
   readonly error = signal<string | null>(null);
@@ -204,6 +227,7 @@ export class ConfiguracionComponent implements OnInit {
       const t = await firstValueFrom(this.tallerApi.obtener());
       this.taller = { nombre: t.nombre, direccion: t.direccion ?? '', telefono: t.telefono ?? '' };
       await this.cargarServicios();
+      await this.cargarFrecuentes();
     } catch (err) {
       this.error.set(mensajeError(err));
     }
@@ -227,6 +251,21 @@ export class ConfiguracionComponent implements OnInit {
       );
       this.nuevo = { nombre: '', precio: null, horasEstimadas: null };
       await this.cargarServicios();
+      await this.cargarFrecuentes();
+    });
+  }
+
+  frecuentesFiltrados() {
+    const q = this.filtroFrecuentes.trim().toLocaleLowerCase();
+    return this.frecuentes().filter((s) => s.nombre.toLocaleLowerCase().includes(q));
+  }
+
+  agregarFrecuente(s: { nombre: string; frecuencia: number; precioSugerido: number }) {
+    this.ejecutar(async () => {
+      await firstValueFrom(this.serviciosApi.crear({ nombre: s.nombre, precio: Number(s.precioSugerido), horasEstimadas: null }));
+      this.aviso.set(`“${s.nombre}” agregado al catálogo.`);
+      await this.cargarServicios();
+      await this.cargarFrecuentes();
     });
   }
 
@@ -258,6 +297,11 @@ export class ConfiguracionComponent implements OnInit {
 
   private async cargarServicios() {
     this.servicios.set(await firstValueFrom(this.serviciosApi.listar(true)));
+  }
+
+  private async cargarFrecuentes() {
+    const lista = await firstValueFrom(this.serviciosApi.frecuentes());
+    this.frecuentes.set(lista.map((s) => ({ nombre: s.nombre, frecuencia: s.frecuencia, precioSugerido: Number(s.precio_sugerido) })));
   }
 
   private async ejecutar(accion: () => Promise<void>) {
