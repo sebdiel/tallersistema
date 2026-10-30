@@ -140,9 +140,6 @@ import { IconoComponent } from '../../layout/icono.component';
               <tr><td>Descuento</td><td class="num">− {{ t.descuento | number: '1.2-2' }}</td></tr>
             }
             <tr class="total"><td>TOTAL Bs</td><td class="num">{{ t.total | number: '1.2-2' }}</td></tr>
-            @if (o.aprobadoEn) {
-              <tr><td colspan="2" class="codigo">Presupuesto aprobado por el cliente el {{ o.aprobadoEn | date: 'dd/MM/yyyy' }}</td></tr>
-            }
             @if (o.presupuestoAprobado != null && t.total !== o.presupuestoAprobado) {
               <tr><td>Presupuesto aprobado</td><td class="num">{{ o.presupuestoAprobado | number: '1.2-2' }}</td></tr>
               <tr>

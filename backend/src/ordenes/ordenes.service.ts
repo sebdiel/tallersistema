@@ -296,19 +296,9 @@ export class OrdenesService {
       const cambios: Partial<OrdenTrabajo> = { estado: dto.estado, mecanicoId: orden.mecanicoId };
       if (dto.estado === EstadoOrden.TERMINADO) cambios.fechaTerminado = fecha;
       if (dto.estado === EstadoOrden.EN_REPARACION) cambios.fechaTerminado = null;
-      // RN-29 / RN-32: al pasar de diagnóstico a reparación se guarda lo que aceptó el cliente, cuándo y cómo.
-      let comentario = dto.comentario ?? null;
+      // RN-29: al pasar de diagnóstico a reparación se guarda el total que aceptó el cliente.
       if (orden.estado === EstadoOrden.EN_DIAGNOSTICO && dto.estado === EstadoOrden.EN_REPARACION) {
-        if (!dto.medioAprobacion) {
-          throw new BadRequestException('Indique cómo aprobó el cliente el presupuesto');
-        }
         cambios.presupuestoAprobado = totales.total;
-        cambios.aprobadoEn = fecha;
-        cambios.medioAprobacion = dto.medioAprobacion;
-        const medio = { PERSONA: 'en persona', LLAMADA: 'por llamada', WHATSAPP: 'por WhatsApp' }[dto.medioAprobacion];
-        comentario =
-          `Cliente aprobó el presupuesto de Bs ${totales.total.toFixed(2)} ${medio}` +
-          (comentario ? `. ${comentario}` : '');
       }
       if (dto.estado === EstadoOrden.ENTREGADO) cambios.fechaEntrega = fecha;
 
@@ -333,7 +323,7 @@ export class OrdenesService {
         estadoAnterior: orden.estado,
         estadoNuevo: dto.estado,
         usuarioId: user.id,
-        comentario,
+        comentario: dto.comentario ?? null,
         fecha,
       });
 

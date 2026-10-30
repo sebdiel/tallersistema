@@ -105,14 +105,6 @@ export class OrdenTrabajo extends BaseEntity {
   @Column({ name: 'presupuesto_aprobado', type: 'numeric', precision: 10, scale: 2, nullable: true, transformer: numeric })
   presupuestoAprobado: number | null;
 
-  /** RN-32: cuándo aprobó el cliente el presupuesto. */
-  @Column({ name: 'aprobado_en', type: 'timestamptz', nullable: true })
-  aprobadoEn: Date | null;
-
-  /** RN-32: cómo lo aprobó (PERSONA, LLAMADA, WHATSAPP). */
-  @Column({ name: 'medio_aprobacion', type: 'varchar', length: 10, nullable: true })
-  medioAprobacion: string | null;
-
   /** RN-16: descuento en Bs, solo lo aplica el administrador. */
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, transformer: numeric })
   descuento: number;
