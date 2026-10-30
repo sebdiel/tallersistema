@@ -13,14 +13,14 @@ import { IconoComponent } from '../../layout/icono.component';
 
 type Filtro = 'ABIERTAS' | 'TODAS' | EstadoOrden;
 
-const FILTROS: { valor: Filtro; texto: string }[] = [
-  { valor: 'ABIERTAS', texto: 'En el taller' },
-  { valor: 'RECIBIDO', texto: 'Recibidos' },
-  { valor: 'EN_DIAGNOSTICO', texto: 'Diagnóstico' },
-  { valor: 'EN_REPARACION', texto: 'Reparación' },
-  { valor: 'TERMINADO', texto: 'Listos' },
-  { valor: 'ENTREGADO', texto: 'Entregados' },
-  { valor: 'TODAS', texto: 'Todas' },
+const FILTROS: { valor: Filtro; texto: string; icono: string }[] = [
+  { valor: 'ABIERTAS', texto: 'En el taller', icono: 'taller' },
+  { valor: 'RECIBIDO', texto: 'Recepción', icono: 'recibir' },
+  { valor: 'EN_DIAGNOSTICO', texto: 'Diagnóstico', icono: 'diagnostico' },
+  { valor: 'EN_REPARACION', texto: 'Reparación', icono: 'llave' },
+  { valor: 'TERMINADO', texto: 'Listos', icono: 'ok' },
+  { valor: 'ENTREGADO', texto: 'Entregados', icono: 'entregado' },
+  { valor: 'TODAS', texto: 'Todas', icono: 'carpeta' },
 ];
 
 /** HU-10: tablero de órdenes de trabajo por estado. */
@@ -42,13 +42,17 @@ const FILTROS: { valor: Filtro; texto: string }[] = [
         [formControl]="busqueda"
       />
 
-      <div class="filtros">
+      <nav class="pestanas">
         @for (f of filtros; track f.valor) {
-          <button [class.activo]="filtro() === f.valor" (click)="filtro.set(f.valor)">
-            {{ f.texto }}
+          <button type="button" class="pestana" [class.activa]="filtro() === f.valor" (click)="filtro.set(f.valor)">
+            <app-icono [nombre]="f.icono" />
+            <span>{{ f.texto }}</span>
+            @if (conteo(f.valor) !== null) {
+              <span class="cuenta">{{ conteo(f.valor) }}</span>
+            }
           </button>
         }
-      </div>
+      </nav>
 
       @if (error()) {
         <div class="alerta alerta-error">{{ error() }}</div>
@@ -94,6 +98,20 @@ const FILTROS: { valor: Filtro; texto: string }[] = [
       </ul>
     </div>
   `,
+  styles: `
+    .pestanas { display: flex; gap: 6px; margin: 12px 0 16px; padding: 6px; overflow-x: auto;
+      border: 1px solid var(--borde); border-radius: 14px; background: var(--superficie); scrollbar-width: thin; }
+    .pestana { flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px; border: none; border-radius: 10px; background: transparent; color: var(--texto-medio);
+      font: inherit; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;
+      white-space: nowrap; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .pestana app-icono { font-size: 1.1rem; }
+    .pestana:hover:not(.activa) { background: #ffffff0d; color: var(--texto); }
+    .pestana.activa { background: #f5b301; color: #1a1a1a; box-shadow: 0 4px 14px #f5b30140; }
+    .cuenta { min-width: 22px; padding: 1px 7px; border-radius: 6px; background: #f5b301; color: #1a1a1a;
+      font-size: 0.75rem; font-weight: 800; text-align: center; }
+    .pestana.activa .cuenta { background: #1a1a1a; color: #f5b301; }
+  `,
 })
 export class OrdenesListaComponent {
   private readonly datos = inject(DatosService);
@@ -108,6 +126,16 @@ export class OrdenesListaComponent {
   readonly ordenes = signal<OrdenTrabajo[]>([]);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
+  /** Órdenes abiertas por estado (contadores de las pestañas). */
+  readonly resumen = signal<Partial<Record<string, number>>>({});
+
+  /** Entregados y Todas no llevan contador: crecen sin límite. */
+  conteo(f: Filtro): number | null {
+    const r = this.resumen();
+    if (f === 'ENTREGADO' || f === 'TODAS') return null;
+    if (f === 'ABIERTAS') return Object.values(r).reduce((s: number, n) => s + (n ?? 0), 0);
+    return r[f] ?? 0;
+  }
 
   constructor() {
     this.busqueda.valueChanges
@@ -121,6 +149,7 @@ export class OrdenesListaComponent {
         this.sync.ultimaSync();
         this.sync.pendientes();
         this.cargar();
+        this.datos.resumenOrdenes().then((r) => this.resumen.set(r)).catch(() => {});
       },
       { allowSignalWrites: true },
     );

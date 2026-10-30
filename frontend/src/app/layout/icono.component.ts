@@ -32,6 +32,12 @@ const ICONOS: Record<string, string> = {
   mas:'<path d="M4 6h16M4 12h16M4 18h16"/>',
   editar: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
   quitar: '<path d="M18 6 6 18M6 6l12 12"/>',
+  taller: '<path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-8h10v8M7 17h10"/>',
+  recibir: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/>',
+  diagnostico: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  llave: '<path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-2-2 6.4-6.4a4 4 0 0 1-5-5L9 4.2 7.6 5.6 4 2 2 4l3.6 3.6L4.2 9l3.1 3.1"/>',
+  entregado: '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  carpeta: '<path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',
 };
 
 @Component({
