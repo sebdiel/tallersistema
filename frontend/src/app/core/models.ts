@@ -215,6 +215,8 @@ export interface OrdenTrabajo {
   fechaEntregaEstimada?: string | null;
   /** RN-27: costo aproximado informado al cliente al recibir (Bs). */
   costoEstimado?: number | null;
+  /** RN-29: total que aceptó el cliente al iniciar la reparación (Bs). */
+  presupuestoAprobado?: number | null;
   vehiculo?: Vehiculo;
   cliente?: Cliente;
   mecanico?: Persona | null;
@@ -223,6 +225,7 @@ export interface OrdenTrabajo {
   // Iteración 3
   descuento: number;
   manoObra?: ManoObra[];
+  externos?: RepuestoExterno[];
   pagos?: Pago[];
   totales?: Totales;
   /** Tiene cambios hechos sin conexión aún no confirmados por el servidor. */
@@ -255,6 +258,7 @@ export const formatoNumero = (n: number | null) =>
 
 export interface Totales {
   repuestos: number;
+  externos: number;
   manoObra: number;
   subtotal: number;
   descuento: number;
@@ -270,6 +274,18 @@ export interface ManoObra {
   monto: number;
   mecanicoId: string | null;
   mecanico?: Persona | null;
+  motivoCambio?: string | null;
+}
+
+/** RN-28: repuesto fuera del inventario (lo trae el cliente o lo compra el taller). */
+export interface RepuestoExterno {
+  id: string;
+  descripcion: string;
+  cantidad: number;
+  origen: 'CLIENTE' | 'TALLER';
+  costoUnitario: number | null;
+  precioUnitario: number;
+  motivoCambio?: string | null;
 }
 
 export type MetodoPago = 'EFECTIVO' | 'QR' | 'TRANSFERENCIA' | 'TARJETA';

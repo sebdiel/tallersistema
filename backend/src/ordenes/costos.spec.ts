@@ -16,6 +16,7 @@ describe('RN-15 cálculo automático de costos de la OT', () => {
     });
     expect(t).toEqual({
       repuestos: 327.5,
+      externos: 0,
       manoObra: 130,
       subtotal: 457.5,
       descuento: 10,
@@ -28,6 +29,18 @@ describe('RN-15 cálculo automático de costos de la OT', () => {
   it('redondea a centavos (evita errores de punto flotante)', () => {
     const t = calcularTotales({ repuestos: [{ cantidad: 3, precioUnitario: 0.1 }] });
     expect(t.total).toBe(0.3);
+  });
+
+  it('RN-28: suma repuestos externos (los que trae el cliente valen 0)', () => {
+    const t = calcularTotales({
+      externos: [
+        { cantidad: 1, precioUnitario: 150 },
+        { cantidad: 2, precioUnitario: 0 },
+      ],
+      manoObra: [{ monto: 30 }],
+    });
+    expect(t.externos).toBe(150);
+    expect(t.total).toBe(180);
   });
 
   it('una OT vacía cuesta 0', () => {

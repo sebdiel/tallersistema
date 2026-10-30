@@ -38,6 +38,10 @@ export class OrdenManoObra {
   @Column({ name: 'usuario_id', type: 'uuid' })
   usuarioId: string;
 
+  /** RN-29: por qué se cambió el precio después de aprobado el presupuesto. */
+  @Column({ name: 'motivo_cambio', type: 'varchar', length: 200, nullable: true })
+  motivoCambio: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

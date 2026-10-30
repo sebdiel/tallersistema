@@ -226,10 +226,137 @@
           @if (!o.repuestos?.length) {
             <label style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
               <input type="checkbox" [checked]="o.sinRepuestos" [disabled]="procesando()" (change)="marcarSinRepuestos($any($event.target).checked)" />
-              Este trabajo no usó repuestos (solo mano de obra)
+              {{ o.estado === 'EN_DIAGNOSTICO' ? 'Este trabajo no necesita repuestos' : 'Este trabajo no usó repuestos' }} (solo mano de obra)
             </label>
           }
         </div>
+      }
+    </section>
+    }
+
+    <!-- RN-28: repuestos fuera del inventario -->
+    @if (enTrabajo() || o.externos?.length) {
+    <section class="card">
+      <h2>Repuestos externos</h2>
+      <p class="item-sub" style="margin-top: 0">Repuestos que no son del inventario: los trae el cliente o el taller los compra afuera.</p>
+      @if (o.externos?.length) {
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Repuesto</th>
+              <th class="num">Cant.</th>
+              <th class="num">P. unit.</th>
+              <th class="num">Subtotal</th>
+              @if (costosEditables()) {
+                <th></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of o.externos; track l.id) {
+              <tr>
+                <td>
+                  {{ l.descripcion }}
+                  <div>
+                    @if (l.origen === 'CLIENTE') {
+                      <span class="origen cliente">Lo trae el cliente</span>
+                    } @else {
+                      <span class="origen taller">Comprado por el taller</span>
+                      @if (l.costoUnitario != null) {
+                        <span class="item-sub"> · costó Bs {{ l.costoUnitario | number: '1.2-2' }}</span>
+                      }
+                    }
+                  </div>
+                  @if (l.motivoCambio) {
+                    <div class="item-sub cambio">✏️ {{ l.motivoCambio }}</div>
+                  }
+                </td>
+                <td class="num">{{ l.cantidad }}</td>
+                <td class="num">{{ l.precioUnitario | number: '1.2-2' }}</td>
+                <td class="num">{{ l.cantidad * l.precioUnitario | number: '1.2-2' }}</td>
+                @if (costosEditables()) {
+                  <td class="num">
+                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="editarExterno(l)" title="Cambiar precio o cantidad">✏️</button>
+                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitarExterno(l)">✕</button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="3">Total repuestos externos (Bs)</th>
+              <th class="num">{{ totales()?.externos | number: '1.2-2' }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      } @else {
+        <p class="item-sub">No hay repuestos externos.</p>
+      }
+
+      @if (editando()?.tipo === 'ext') {
+        <div class="editor">
+          <strong>Cambiar: {{ ed.descripcion }}</strong>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="edc">Cantidad</label>
+              <input id="edc" type="number" min="0.01" step="1" inputmode="decimal" [(ngModel)]="ed.cantidad" />
+            </div>
+            @if (!editando()!.delCliente) {
+              <div class="campo">
+                <label for="edp">Se cobra al cliente (Bs c/u)</label>
+                <input id="edp" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ed.precio" />
+              </div>
+              <div class="campo">
+                <label for="edco">Lo que pagó el taller (Bs c/u)</label>
+                <input id="edco" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ed.costo" placeholder="Opcional" />
+              </div>
+            }
+          </div>
+          <div class="campo">
+            <label [class.req]="pideMotivo()" for="edm">Motivo del cambio</label>
+            <input id="edm" [(ngModel)]="ed.motivo" placeholder="Ej.: el espejo costaba Bs 120, no 100" />
+          </div>
+          <div class="acciones">
+            <button class="btn btn-sec" (click)="editando.set(null)">Volver</button>
+            <button class="btn" [disabled]="procesando()" (click)="guardarEdicion()">Guardar cambio</button>
+          </div>
+        </div>
+      }
+
+      @if (costosEditables() && enTrabajo()) {
+        <div class="filtros" style="margin-top: 12px">
+          <button type="button" [class.activo]="ext.origen === 'CLIENTE'" (click)="ext.origen = 'CLIENTE'">Lo trae el cliente</button>
+          <button type="button" [class.activo]="ext.origen === 'TALLER'" (click)="ext.origen = 'TALLER'">Lo compra el taller</button>
+        </div>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="exd">Repuesto</label>
+            <input id="exd" [(ngModel)]="ext.descripcion" placeholder="Ej.: espejo lateral izquierdo" />
+          </div>
+          <div class="campo">
+            <label for="exc">Cantidad</label>
+            <input id="exc" type="number" min="0.01" step="1" inputmode="decimal" [(ngModel)]="ext.cantidad" />
+          </div>
+          @if (ext.origen === 'TALLER') {
+            <div class="campo">
+              <label for="excos">Lo que pagó el taller (Bs c/u)</label>
+              <input id="excos" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ext.costo" placeholder="Opcional" />
+            </div>
+            <div class="campo">
+              <label for="expre">Se cobra al cliente (Bs c/u)</label>
+              <input id="expre" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ext.precio" />
+            </div>
+          }
+          <div class="campo" style="justify-content: flex-end">
+            <button class="btn" [disabled]="procesando() || !ext.descripcion || (ext.origen === 'TALLER' && ext.precio == null)" (click)="agregarExterno()">
+              Agregar repuesto externo
+            </button>
+          </div>
+        </div>
+        @if (ext.origen === 'CLIENTE') {
+          <p class="item-sub">No se cobra: queda registrado que el repuesto lo puso el cliente. Cobre la instalación en Mano de obra.</p>
+        }
       }
     </section>
     }
@@ -248,10 +375,14 @@
                   @if (l.mecanico) {
                     <div class="item-sub"><app-icono nombre="personal" /> {{ l.mecanico.nombre }}</div>
                   }
+                  @if (l.motivoCambio) {
+                    <div class="item-sub cambio">✏️ {{ l.motivoCambio }}</div>
+                  }
                 </td>
                 <td class="num">{{ l.monto | number: '1.2-2' }}</td>
                 @if (costosEditables()) {
                   <td class="num">
+                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="editarMano(l)" title="Cambiar descripción o monto">✏️</button>
                     <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitarManoObra(l)">✕</button>
                   </td>
                 }
@@ -267,6 +398,30 @@
         </table>
       } @else {
         <p class="item-sub">No hay mano de obra registrada.</p>
+      }
+
+      @if (editando()?.tipo === 'mo') {
+        <div class="editor">
+          <strong>Cambiar mano de obra</strong>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="emd">Descripción</label>
+              <input id="emd" [(ngModel)]="ed.descripcion" />
+            </div>
+            <div class="campo">
+              <label for="emm">Monto (Bs)</label>
+              <input id="emm" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ed.precio" />
+            </div>
+          </div>
+          <div class="campo">
+            <label [class.req]="pideMotivo()" for="emo">Motivo del cambio</label>
+            <input id="emo" [(ngModel)]="ed.motivo" placeholder="Ej.: el trabajo llevó más tiempo del previsto" />
+          </div>
+          <div class="acciones">
+            <button class="btn btn-sec" (click)="editando.set(null)">Volver</button>
+            <button class="btn" [disabled]="procesando()" (click)="guardarEdicion()">Guardar cambio</button>
+          </div>
+        </div>
       }
 
       @if (costosEditables() && enTrabajo()) {
@@ -302,10 +457,14 @@
     @if (totales(); as t) {
       @if (o.estado !== 'RECIBIDO' || o.pagos?.length) {
       <section class="card">
-        <h2>Costo y pagos</h2>
+        <h2>{{ presupuestando() ? 'Presupuesto' : 'Costo y pagos' }}</h2>
         <dl class="datos">
           <dt>Repuestos</dt>
           <dd class="num">Bs {{ t.repuestos | number: '1.2-2' }}</dd>
+          @if (t.externos) {
+            <dt>Repuestos externos</dt>
+            <dd class="num">Bs {{ t.externos | number: '1.2-2' }}</dd>
+          }
           <dt>Mano de obra</dt>
           <dd class="num">Bs {{ t.manoObra | number: '1.2-2' }}</dd>
           <dt>Descuento</dt>
@@ -321,10 +480,20 @@
           </dd>
           <dt><strong>Total</strong></dt>
           <dd class="num"><strong>Bs {{ t.total | number: '1.2-2' }}</strong></dd>
+          @if (o.presupuestoAprobado != null && t.total !== o.presupuestoAprobado) {
+            <dt>Presupuesto aprobado</dt>
+            <dd class="num">Bs {{ o.presupuestoAprobado | number: '1.2-2' }}</dd>
+            <dt><strong>Diferencia</strong></dt>
+            <dd class="num diferencia" [class.sube]="t.total > o.presupuestoAprobado">
+              <strong>{{ t.total > o.presupuestoAprobado ? '+' : '−' }} Bs {{ (t.total > o.presupuestoAprobado ? t.total - o.presupuestoAprobado : o.presupuestoAprobado - t.total) | number: '1.2-2' }}</strong>
+            </dd>
+          }
+          @if (!presupuestando()) {
           <dt>Pagado</dt>
           <dd class="num">Bs {{ t.pagado | number: '1.2-2' }}</dd>
           <dt><strong>Saldo</strong></dt>
           <dd class="num" [class.stock-bajo]="t.saldo > 0"><strong>Bs {{ t.saldo | number: '1.2-2' }}</strong></dd>
+          }
         </dl>
 
         @if (o.pagos?.length) {
@@ -372,7 +541,7 @@
           </div>
         }
 
-        @if (t.saldo > 0 && o.estado !== 'CANCELADO') {
+        @if (t.saldo > 0 && o.estado !== 'CANCELADO' && !presupuestando()) {
           <div class="grid-2" style="margin-top: 16px">
             <div class="campo">
               <label for="pm">Registrar pago (Bs)</label>

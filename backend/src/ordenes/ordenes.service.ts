@@ -23,11 +23,14 @@ import { Totales, calcularTotales } from './costos';
 import {
   AgregarManoObraDto,
   AgregarRepuestoDto,
+  AgregarRepuestoExternoDto,
   AnularPagoDto,
   AsignarMecanicoDto,
   CambiarEstadoDto,
   CreateOrdenDto,
   DescuentoDto,
+  EditarManoObraDto,
+  EditarRepuestoExternoDto,
   FiltroOrdenesDto,
   RegistrarPagoDto,
   UpdateOrdenDto,
@@ -41,6 +44,7 @@ import {
 } from './maquina-estados';
 import { OrdenManoObra } from './orden-mano-obra.entity';
 import { OrdenRepuesto } from './orden-repuesto.entity';
+import { OrdenRepuestoExterno, OrigenRepuestoExterno } from './orden-repuesto-externo.entity';
 import { OrdenTrabajo } from './orden.entity';
 import { Pago } from './pago.entity';
 
@@ -75,6 +79,7 @@ export class OrdenesService {
       .leftJoinAndSelect('o.repuestos', 'r')
       .leftJoinAndSelect('r.repuesto', 'rp')
       .leftJoinAndSelect('o.manoObra', 'mo')
+      .leftJoinAndSelect('o.externos', 'ex')
       .leftJoinAndSelect('o.pagos', 'pg')
       .where('o.taller_id = :tallerId', { tallerId: tallerDe(user) })
       // Con take() + joins TypeORM exige el nombre de la propiedad, no de la columna.
@@ -105,12 +110,14 @@ export class OrdenesService {
         repuestos: { repuesto: true },
         historial: { usuario: true },
         manoObra: { mecanico: true },
+        externos: true,
         pagos: { usuario: true },
       },
       order: {
         repuestos: { createdAt: 'ASC' },
         historial: { fecha: 'ASC' },
         manoObra: { createdAt: 'ASC' },
+        externos: { createdAt: 'ASC' },
         pagos: { fecha: 'ASC' },
       },
     });
@@ -286,6 +293,10 @@ export class OrdenesService {
       const cambios: Partial<OrdenTrabajo> = { estado: dto.estado, mecanicoId: orden.mecanicoId };
       if (dto.estado === EstadoOrden.TERMINADO) cambios.fechaTerminado = fecha;
       if (dto.estado === EstadoOrden.EN_REPARACION) cambios.fechaTerminado = null;
+      // RN-29: al pasar de diagnóstico a reparación se guarda el total que aceptó el cliente.
+      if (orden.estado === EstadoOrden.EN_DIAGNOSTICO && dto.estado === EstadoOrden.EN_REPARACION) {
+        cambios.presupuestoAprobado = totales.total;
+      }
       if (dto.estado === EstadoOrden.ENTREGADO) cambios.fechaEntrega = fecha;
 
       // RN-14: al cancelar, los repuestos vuelven al inventario.
@@ -453,6 +464,92 @@ export class OrdenesService {
     return this.obtener(user, id);
   }
 
+  /** RN-28: repuesto que trae el cliente o que el taller compra afuera (no toca el inventario). */
+  async agregarRepuestoExterno(user: UsuarioActual, id: string, dto: AgregarRepuestoExternoDto) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarPermiso(user, orden);
+      this.verificarEstadoCostos(orden);
+      if (dto.id && (await m.exists(OrdenRepuestoExterno, { where: { id: dto.id } }))) {
+        throw new ConflictException('El repuesto ya fue registrado');
+      }
+      const delCliente = dto.origen === OrigenRepuestoExterno.CLIENTE;
+      if (!delCliente && dto.precioUnitario == null) {
+        throw new BadRequestException('Indique cuánto se cobra por el repuesto');
+      }
+      await m.insert(OrdenRepuestoExterno, {
+        id: dto.id ?? randomUUID(),
+        ordenId: id,
+        descripcion: dto.descripcion,
+        cantidad: dto.cantidad,
+        origen: dto.origen,
+        costoUnitario: delCliente ? null : (dto.costoUnitario ?? null),
+        precioUnitario: delCliente ? 0 : dto.precioUnitario!,
+        usuarioId: user.id,
+      });
+    });
+    return this.obtener(user, id);
+  }
+
+  async quitarRepuestoExterno(user: UsuarioActual, id: string, lineaId: string) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarPermiso(user, orden);
+      this.verificarEstadoCostos(orden);
+      const linea = await m.findOne(OrdenRepuestoExterno, { where: { id: lineaId, ordenId: id } });
+      if (!linea) throw new NotFoundException('El repuesto no está en la orden');
+      await this.verificarTotalCubrePagos(m, orden, linea.cantidad * linea.precioUnitario);
+      await m.delete(OrdenRepuestoExterno, linea.id);
+    });
+    return this.obtener(user, id);
+  }
+
+  /** RN-29: corregir el precio o la cantidad de un repuesto externo. */
+  async editarRepuestoExterno(user: UsuarioActual, id: string, lineaId: string, dto: EditarRepuestoExternoDto) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarPermiso(user, orden);
+      this.verificarEstadoCostos(orden);
+      const linea = await m.findOne(OrdenRepuestoExterno, { where: { id: lineaId, ordenId: id } });
+      if (!linea) throw new NotFoundException('El repuesto no está en la orden');
+
+      const delCliente = linea.origen === OrigenRepuestoExterno.CLIENTE;
+      const cantidad = dto.cantidad ?? linea.cantidad;
+      const precioUnitario = delCliente ? 0 : (dto.precioUnitario ?? linea.precioUnitario);
+      const baja = linea.cantidad * linea.precioUnitario - cantidad * precioUnitario;
+      if (baja > 0) await this.verificarTotalCubrePagos(m, orden, baja);
+
+      await m.update(OrdenRepuestoExterno, linea.id, {
+        cantidad,
+        precioUnitario,
+        costoUnitario: delCliente ? null : dto.costoUnitario !== undefined ? dto.costoUnitario : linea.costoUnitario,
+        motivoCambio: dto.motivo ?? linea.motivoCambio,
+      });
+    });
+    return this.obtener(user, id);
+  }
+
+  /** RN-29: corregir la descripción o el monto de una línea de mano de obra. */
+  async editarManoObra(user: UsuarioActual, id: string, lineaId: string, dto: EditarManoObraDto) {
+    await this.dataSource.transaction(async (m) => {
+      const orden = await this.bloquear(m, user, id);
+      this.verificarPermiso(user, orden);
+      this.verificarEstadoCostos(orden);
+      const linea = await m.findOne(OrdenManoObra, { where: { id: lineaId, ordenId: id } });
+      if (!linea) throw new NotFoundException('La mano de obra no está en la orden');
+
+      const monto = dto.monto ?? linea.monto;
+      if (linea.monto - monto > 0) await this.verificarTotalCubrePagos(m, orden, linea.monto - monto);
+
+      await m.update(OrdenManoObra, linea.id, {
+        descripcion: dto.descripcion ?? linea.descripcion,
+        monto,
+        motivoCambio: dto.motivo ?? linea.motivoCambio,
+      });
+    });
+    return this.obtener(user, id);
+  }
+
   /** RN-16: descuento solo del administrador y nunca mayor al subtotal. */
   async aplicarDescuento(user: UsuarioActual, id: string, dto: DescuentoDto) {
     await this.dataSource.transaction(async (m) => {
@@ -522,12 +619,13 @@ export class OrdenesService {
   // ---------------------------------------------------------------- auxiliares
 
   private async totalesDe(m: EntityManager, orden: OrdenTrabajo): Promise<Totales> {
-    const [repuestos, manoObra, pagos] = await Promise.all([
+    const [repuestos, manoObra, externos, pagos] = await Promise.all([
       m.find(OrdenRepuesto, { where: { ordenId: orden.id } }),
       m.find(OrdenManoObra, { where: { ordenId: orden.id } }),
+      m.find(OrdenRepuestoExterno, { where: { ordenId: orden.id } }),
       m.find(Pago, { where: { ordenId: orden.id } }),
     ]);
-    return calcularTotales({ descuento: orden.descuento, repuestos, manoObra, pagos });
+    return calcularTotales({ descuento: orden.descuento, repuestos, manoObra, externos, pagos });
   }
 
   /** RN-17: quitar un cargo no puede dejar el total por debajo de lo ya pagado. */

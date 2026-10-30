@@ -17,11 +17,14 @@ import { tallerDe } from '../common/utils/taller.util';
 import {
   AgregarManoObraDto,
   AgregarRepuestoDto,
+  AgregarRepuestoExternoDto,
   AnularPagoDto,
   AsignarMecanicoDto,
   CambiarEstadoDto,
   CreateOrdenDto,
   DescuentoDto,
+  EditarManoObraDto,
+  EditarRepuestoExternoDto,
   RegistrarPagoDto,
   UpdateOrdenDto,
 } from '../ordenes/dto/orden.dto';
@@ -143,6 +146,23 @@ export class SyncService {
         return this.ordenes.agregarManoObra(user, ref(), await validar(AgregarManoObraDto, op.datos));
       case 'orden.manoobra.quitar':
         return this.ordenes.quitarManoObra(user, ref(), this.idDe(op, 'lineaId'));
+      case 'orden.externo.agregar':
+        return this.ordenes.agregarRepuestoExterno(user, ref(), await validar(AgregarRepuestoExternoDto, op.datos));
+      case 'orden.externo.quitar':
+        return this.ordenes.quitarRepuestoExterno(user, ref(), this.idDe(op, 'lineaId'));
+      case 'orden.externo.editar': {
+        const { lineaId, ...resto } = op.datos;
+        return this.ordenes.editarRepuestoExterno(
+          user,
+          ref(),
+          this.idDe(op, 'lineaId'),
+          await validar(EditarRepuestoExternoDto, resto),
+        );
+      }
+      case 'orden.manoobra.editar': {
+        const { lineaId, ...resto } = op.datos;
+        return this.ordenes.editarManoObra(user, ref(), this.idDe(op, 'lineaId'), await validar(EditarManoObraDto, resto));
+      }
       case 'orden.descuento':
         this.soloAdmin(user, 'aplica descuentos');
         return this.ordenes.aplicarDescuento(user, ref(), await validar(DescuentoDto, op.datos));

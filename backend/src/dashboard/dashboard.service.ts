@@ -157,6 +157,7 @@ export class DashboardService {
            SELECT o.id, o.numero, o.estado, c.nombre AS cliente, v.placa,
                   COALESCE((SELECT SUM(cantidad * precio_unitario) FROM orden_repuestos WHERE orden_id = o.id), 0)
                 + COALESCE((SELECT SUM(monto) FROM orden_mano_obra WHERE orden_id = o.id), 0)
+                + COALESCE((SELECT SUM(cantidad * precio_unitario) FROM orden_repuestos_externos WHERE orden_id = o.id), 0)
                 - o.descuento
                 - COALESCE((SELECT SUM(monto) FROM pagos WHERE orden_id = o.id AND NOT anulado), 0) AS saldo
              FROM ordenes_trabajo o
@@ -252,13 +253,18 @@ export class DashboardService {
          SELECT m.orden_id, SUM(m.monto) AS monto
            FROM orden_mano_obra m JOIN entregadas e ON e.id = m.orden_id
           GROUP BY m.orden_id
+       ), ext AS (
+         SELECT x.orden_id, SUM(x.cantidad * x.precio_unitario) AS venta
+           FROM orden_repuestos_externos x JOIN entregadas e ON e.id = x.orden_id
+          GROUP BY x.orden_id
        )
        SELECT
          (SELECT COUNT(*) FROM entregadas) AS entregadas,
-         (SELECT COALESCE(SUM(COALESCE(rep.venta, 0) + COALESCE(mo.monto, 0) - e.descuento), 0)
+         (SELECT COALESCE(SUM(COALESCE(rep.venta, 0) + COALESCE(mo.monto, 0) + COALESCE(ext.venta, 0) - e.descuento), 0)
             FROM entregadas e
             LEFT JOIN rep ON rep.orden_id = e.id
-            LEFT JOIN mo ON mo.orden_id = e.id) AS facturado,
+            LEFT JOIN mo ON mo.orden_id = e.id
+            LEFT JOIN ext ON ext.orden_id = e.id) AS facturado,
          (SELECT COALESCE(SUM(venta), 0) FROM rep) AS repuestos,
          (SELECT COALESCE(SUM(margen), 0) FROM rep) AS margen_repuestos,
          (SELECT COALESCE(SUM(monto), 0) FROM mo) AS mano_obra,

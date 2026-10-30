@@ -14,11 +14,14 @@ import { Rol } from '../common/enums/rol.enum';
 import {
   AgregarManoObraDto,
   AgregarRepuestoDto,
+  AgregarRepuestoExternoDto,
   AnularPagoDto,
   AsignarMecanicoDto,
   CambiarEstadoDto,
   CreateOrdenDto,
   DescuentoDto,
+  EditarManoObraDto,
+  EditarRepuestoExternoDto,
   FiltroOrdenesDto,
   RegistrarPagoDto,
   UpdateOrdenDto,
@@ -95,6 +98,34 @@ export class OrdenesController {
     return this.service.quitarRepuesto(user, id, lineaId);
   }
 
+  @Post(':id/externos')
+  agregarRepuestoExterno(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AgregarRepuestoExternoDto,
+  ) {
+    return this.service.agregarRepuestoExterno(user, id, dto);
+  }
+
+  @Patch(':id/externos/:lineaId')
+  editarRepuestoExterno(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('lineaId', ParseUUIDPipe) lineaId: string,
+    @Body() dto: EditarRepuestoExternoDto,
+  ) {
+    return this.service.editarRepuestoExterno(user, id, lineaId, dto);
+  }
+
+  @Delete(':id/externos/:lineaId')
+  quitarRepuestoExterno(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('lineaId', ParseUUIDPipe) lineaId: string,
+  ) {
+    return this.service.quitarRepuestoExterno(user, id, lineaId);
+  }
+
   // ---------------------------------------------------------------- Iteración 3
 
   @Post(':id/mano-obra')
@@ -104,6 +135,16 @@ export class OrdenesController {
     @Body() dto: AgregarManoObraDto,
   ) {
     return this.service.agregarManoObra(user, id, dto);
+  }
+
+  @Patch(':id/mano-obra/:lineaId')
+  editarManoObra(
+    @CurrentUser() user: UsuarioActual,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('lineaId', ParseUUIDPipe) lineaId: string,
+    @Body() dto: EditarManoObraDto,
+  ) {
+    return this.service.editarManoObra(user, id, lineaId, dto);
   }
 
   @Delete(':id/mano-obra/:lineaId')

@@ -19,6 +19,7 @@ import {
   OrdenTrabajo,
   Pago,
   Repuesto,
+  RepuestoExterno,
   Servicio,
   Taller,
   Vehiculo,
@@ -290,6 +291,7 @@ export class DatosService {
       sinRepuestos: false,
       descuento: 0,
       manoObra: [],
+      externos: [],
       pagos: [],
       fechaIngreso: fecha,
       fechaTerminado: null,
@@ -360,6 +362,8 @@ export class DatosService {
     orden.estado = destino;
     if (destino === 'TERMINADO') orden.fechaTerminado = fecha;
     if (destino === 'EN_REPARACION') orden.fechaTerminado = null;
+    // RN-29: se guarda el total que aceptó el cliente.
+    if (o.estado === 'EN_DIAGNOSTICO' && destino === 'EN_REPARACION') orden.presupuestoAprobado = t.total;
     if (destino === 'ENTREGADO') orden.fechaEntrega = fecha;
     if (destino === 'CANCELADO') orden.repuestos = [];
     orden._pendiente = true;
@@ -571,6 +575,151 @@ export class DatosService {
           ref: o.id,
           datos: { lineaId: linea.id },
           descripcion: `Quitar "${linea.descripcion}" de ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  /** RN-28: repuesto que trae el cliente o que el taller compra afuera. */
+  async agregarRepuestoExterno(
+    o: OrdenTrabajo,
+    d: { descripcion: string; cantidad: number; origen: 'CLIENTE' | 'TALLER'; costoUnitario?: number | null; precioUnitario?: number | null },
+  ) {
+    this.verificarPermiso(o);
+    this.verificarEstadoCostos(o);
+    if (d.descripcion.trim().length < 3) throw new Error('Indique qué repuesto es');
+    if (!(d.cantidad > 0)) throw new Error('La cantidad debe ser mayor a 0');
+    const delCliente = d.origen === 'CLIENTE';
+    if (!delCliente && !(d.precioUnitario != null && d.precioUnitario >= 0)) {
+      throw new Error('Indique cuánto se cobra por el repuesto');
+    }
+
+    const linea: RepuestoExterno = {
+      id: uuid(),
+      descripcion: d.descripcion.trim(),
+      cantidad: d.cantidad,
+      origen: d.origen,
+      costoUnitario: delCliente ? null : (d.costoUnitario ?? null),
+      precioUnitario: delCliente ? 0 : d.precioUnitario!,
+    };
+    const orden = structuredClone(o);
+    orden.externos = [...(orden.externos ?? []), linea];
+    orden._pendiente = true;
+
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.externo.agregar',
+          ref: o.id,
+          datos: { ...linea },
+          descripcion: `Repuesto externo "${linea.descripcion}" en ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  async quitarRepuestoExterno(o: OrdenTrabajo, linea: RepuestoExterno) {
+    this.verificarPermiso(o);
+    this.verificarEstadoCostos(o);
+    this.verificarTotalCubrePagos(o, linea.cantidad * linea.precioUnitario);
+    const orden = structuredClone(o);
+    orden.externos = (orden.externos ?? []).filter((l) => l.id !== linea.id);
+    orden._pendiente = true;
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.externo.quitar',
+          ref: o.id,
+          datos: { lineaId: linea.id },
+          descripcion: `Quitar "${linea.descripcion}" de ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  /** RN-29: corregir precio o cantidad de un repuesto externo. */
+  async editarRepuestoExterno(
+    o: OrdenTrabajo,
+    linea: RepuestoExterno,
+    d: { cantidad: number; precioUnitario: number; costoUnitario: number | null; motivo: string | null },
+  ) {
+    this.verificarPermiso(o);
+    this.verificarEstadoCostos(o);
+    if (!(d.cantidad > 0)) throw new Error('La cantidad debe ser mayor a 0');
+    if (!(d.precioUnitario >= 0)) throw new Error('Indique cuánto se cobra por el repuesto');
+    const delCliente = linea.origen === 'CLIENTE';
+    const precioUnitario = delCliente ? 0 : d.precioUnitario;
+    const baja = linea.cantidad * linea.precioUnitario - d.cantidad * precioUnitario;
+    if (baja > 0) this.verificarTotalCubrePagos(o, baja);
+
+    const nueva: RepuestoExterno = {
+      ...linea,
+      cantidad: d.cantidad,
+      precioUnitario,
+      costoUnitario: delCliente ? null : d.costoUnitario,
+      motivoCambio: d.motivo?.trim() || linea.motivoCambio || null,
+    };
+    const orden = structuredClone(o);
+    orden.externos = (orden.externos ?? []).map((l) => (l.id === linea.id ? nueva : l));
+    orden._pendiente = true;
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.externo.editar',
+          ref: o.id,
+          datos: {
+            lineaId: linea.id,
+            cantidad: nueva.cantidad,
+            precioUnitario: nueva.precioUnitario,
+            costoUnitario: nueva.costoUnitario,
+            motivo: d.motivo?.trim() || null,
+          },
+          descripcion: `Cambiar "${linea.descripcion}" en ${formatoNumero(o.numero)}`,
+        },
+      ],
+      o.id,
+      [],
+      () => db.ordenes.put(recalcular(orden)),
+    );
+  }
+
+  /** RN-29: corregir descripción o monto de la mano de obra. */
+  async editarManoObra(o: OrdenTrabajo, linea: ManoObra, d: { descripcion: string; monto: number; motivo: string | null }) {
+    this.verificarPermiso(o);
+    this.verificarEstadoCostos(o);
+    if (d.descripcion.trim().length < 3) throw new Error('Describa el trabajo realizado');
+    if (!(d.monto >= 0)) throw new Error('Indique el monto de la mano de obra');
+    if (linea.monto - d.monto > 0) this.verificarTotalCubrePagos(o, linea.monto - d.monto);
+
+    const nueva: ManoObra = {
+      ...linea,
+      descripcion: d.descripcion.trim(),
+      monto: d.monto,
+      motivoCambio: d.motivo?.trim() || linea.motivoCambio || null,
+    };
+    const orden = structuredClone(o);
+    orden.manoObra = (orden.manoObra ?? []).map((l) => (l.id === linea.id ? nueva : l));
+    orden._pendiente = true;
+    return this.ejecutar(
+      [
+        {
+          id: uuid(),
+          tipo: 'orden.manoobra.editar',
+          ref: o.id,
+          datos: { lineaId: linea.id, descripcion: nueva.descripcion, monto: nueva.monto, motivo: d.motivo?.trim() || null },
+          descripcion: `Cambiar "${linea.descripcion}" en ${formatoNumero(o.numero)}`,
         },
       ],
       o.id,

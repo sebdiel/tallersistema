@@ -5,6 +5,7 @@ import { HistorialEstado } from './historial-estado.entity';
 import { Servicio } from '../servicios/servicio.entity';
 import { OrdenManoObra } from './orden-mano-obra.entity';
 import { OrdenRepuesto } from './orden-repuesto.entity';
+import { OrdenRepuestoExterno } from './orden-repuesto-externo.entity';
 import { Pago } from './pago.entity';
 import { OrdenTrabajo } from './orden.entity';
 import { OrdenesController } from './ordenes.controller';
@@ -17,6 +18,7 @@ import { OrdenesService } from './ordenes.service';
       OrdenRepuesto,
       HistorialEstado,
       OrdenManoObra,
+      OrdenRepuestoExterno,
       Pago,
       Servicio,
     ]),

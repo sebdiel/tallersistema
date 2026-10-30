@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 import { EstadoOrden } from '../maquina-estados';
 import { MetodoPago } from '../pago.entity';
+import { OrigenRepuestoExterno } from '../orden-repuesto-externo.entity';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || null : value;
@@ -178,6 +179,88 @@ export class AgregarManoObraDto {
   @IsOptional()
   @IsUUID()
   mecanicoId?: string | null;
+}
+
+/** RN-28: repuesto que no sale del inventario. */
+export class AgregarRepuestoExternoDto {
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @Transform(trim)
+  @IsString({ message: 'Indique qué repuesto es' })
+  @MinLength(3, { message: 'Indique qué repuesto es' })
+  @MaxLength(200)
+  descripcion: string;
+
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive({ message: 'La cantidad debe ser mayor a 0' })
+  cantidad: number;
+
+  @IsEnum(OrigenRepuestoExterno, { message: 'Indique quién compra el repuesto' })
+  origen: OrigenRepuestoExterno;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  costoUnitario?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  precioUnitario?: number;
+}
+
+/** RN-29: corregir precio o cantidad de un repuesto externo. */
+export class EditarRepuestoExternoDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive({ message: 'La cantidad debe ser mayor a 0' })
+  cantidad?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  costoUnitario?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  precioUnitario?: number;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  motivo?: string | null;
+}
+
+/** RN-29: corregir descripción o monto de una línea de mano de obra. */
+export class EditarManoObraDto {
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MinLength(3, { message: 'Describa el trabajo realizado' })
+  @MaxLength(200)
+  descripcion?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monto?: number;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  motivo?: string | null;
 }
 
 export class DescuentoDto {

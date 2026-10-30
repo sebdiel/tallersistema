@@ -21,6 +21,10 @@ export const TIPOS_OPERACION = [
   // Iteración 3
   'orden.manoobra.agregar',
   'orden.manoobra.quitar',
+  'orden.externo.agregar',
+  'orden.externo.quitar',
+  'orden.externo.editar',
+  'orden.manoobra.editar',
   'orden.descuento',
   'orden.pago.registrar',
   'orden.pago.anular',

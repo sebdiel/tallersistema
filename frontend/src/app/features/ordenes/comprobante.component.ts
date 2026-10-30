@@ -98,13 +98,32 @@ import { IconoComponent } from '../../layout/icono.component';
             }
             @for (l of o.manoObra ?? []; track l.id) {
               <tr>
-                <td>Mano de obra: {{ l.descripcion }}</td>
+                <td>
+                  Mano de obra: {{ l.descripcion }}
+                  @if (l.motivoCambio) {
+                    <div class="codigo">Cambio: {{ l.motivoCambio }}</div>
+                  }
+                </td>
                 <td class="num">1</td>
                 <td class="num">{{ l.monto | number: '1.2-2' }}</td>
                 <td class="num">{{ l.monto | number: '1.2-2' }}</td>
               </tr>
             }
-            @if (!(o.repuestos?.length || o.manoObra?.length)) {
+            @for (l of o.externos ?? []; track l.id) {
+              <tr>
+                <td>
+                  {{ l.descripcion }}
+                  <span class="codigo">{{ l.origen === 'CLIENTE' ? '(provisto por el cliente)' : '(compra externa)' }}</span>
+                  @if (l.motivoCambio) {
+                    <div class="codigo">Cambio: {{ l.motivoCambio }}</div>
+                  }
+                </td>
+                <td class="num">{{ l.cantidad }}</td>
+                <td class="num">{{ l.precioUnitario | number: '1.2-2' }}</td>
+                <td class="num">{{ l.cantidad * l.precioUnitario | number: '1.2-2' }}</td>
+              </tr>
+            }
+            @if (!(o.repuestos?.length || o.manoObra?.length || o.externos?.length)) {
               <tr><td colspan="4" class="vacio">Sin conceptos registrados todavía.</td></tr>
             }
           </tbody>
@@ -113,11 +132,21 @@ import { IconoComponent } from '../../layout/icono.component';
         @if (totales(); as t) {
           <table class="totales">
             <tr><td>Repuestos</td><td class="num">{{ t.repuestos | number: '1.2-2' }}</td></tr>
+            @if (t.externos) {
+              <tr><td>Repuestos externos</td><td class="num">{{ t.externos | number: '1.2-2' }}</td></tr>
+            }
             <tr><td>Mano de obra</td><td class="num">{{ t.manoObra | number: '1.2-2' }}</td></tr>
             @if (t.descuento > 0) {
               <tr><td>Descuento</td><td class="num">− {{ t.descuento | number: '1.2-2' }}</td></tr>
             }
             <tr class="total"><td>TOTAL Bs</td><td class="num">{{ t.total | number: '1.2-2' }}</td></tr>
+            @if (o.presupuestoAprobado != null && t.total !== o.presupuestoAprobado) {
+              <tr><td>Presupuesto aprobado</td><td class="num">{{ o.presupuestoAprobado | number: '1.2-2' }}</td></tr>
+              <tr>
+                <td>Diferencia</td>
+                <td class="num">{{ t.total > o.presupuestoAprobado ? '+' : '−' }} {{ (t.total > o.presupuestoAprobado ? t.total - o.presupuestoAprobado : o.presupuestoAprobado - t.total) | number: '1.2-2' }}</td>
+              </tr>
+            }
             @if (!esPresupuesto()) {
               <tr><td>Pagado</td><td class="num">{{ t.pagado | number: '1.2-2' }}</td></tr>
               <tr class="total"><td>SALDO Bs</td><td class="num">{{ t.saldo | number: '1.2-2' }}</td></tr>

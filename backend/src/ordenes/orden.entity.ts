@@ -16,6 +16,7 @@ import { Vehiculo } from '../vehiculos/vehiculo.entity';
 import { HistorialEstado } from './historial-estado.entity';
 import { EstadoOrden } from './maquina-estados';
 import { OrdenManoObra } from './orden-mano-obra.entity';
+import { OrdenRepuestoExterno } from './orden-repuesto-externo.entity';
 import { OrdenRepuesto } from './orden-repuesto.entity';
 import { Pago } from './pago.entity';
 
@@ -100,12 +101,19 @@ export class OrdenTrabajo extends BaseEntity {
   @Column({ name: 'costo_estimado', type: 'numeric', precision: 10, scale: 2, nullable: true, transformer: numeric })
   costoEstimado: number | null;
 
+  /** RN-29: total del presupuesto que aceptó el cliente al iniciar la reparación (Bs). */
+  @Column({ name: 'presupuesto_aprobado', type: 'numeric', precision: 10, scale: 2, nullable: true, transformer: numeric })
+  presupuestoAprobado: number | null;
+
   /** RN-16: descuento en Bs, solo lo aplica el administrador. */
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, transformer: numeric })
   descuento: number;
 
   @OneToMany(() => OrdenManoObra, (m) => m.orden)
   manoObra: OrdenManoObra[];
+
+  @OneToMany(() => OrdenRepuestoExterno, (e) => e.orden)
+  externos: OrdenRepuestoExterno[];
 
   @OneToMany(() => Pago, (p) => p.orden)
   pagos: Pago[];

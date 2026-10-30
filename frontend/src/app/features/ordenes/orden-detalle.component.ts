@@ -24,6 +24,7 @@ import {
   Pago,
   Persona,
   Repuesto,
+  RepuestoExterno,
   Servicio,
   formatoNumero,
 } from '../../core/models';
@@ -35,6 +36,13 @@ import {
   imports: [IconoComponent, RouterLink, FormsModule, DatePipe, DecimalPipe],
   templateUrl: './orden-detalle.component.html',
   styles: `
+    .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
+    .cambio { color: #f5b301; }
+    .diferencia { color: #16a34a; }
+    .diferencia.sube { color: #d97706; }
+    .origen { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+    .origen.cliente { background: #2563eb22; color: #60a5fa; }
+    .origen.taller { background: #f5b30122; color: #f5b301; }
     .pasos { display: flex; gap: 4px; margin-bottom: 16px; overflow-x: auto; }
     .paso { flex: 1; min-width: 90px; text-align: center; font-size: 0.8rem; color: var(--texto-suave);
       padding-top: 8px; border-top: 4px solid var(--borde); }
@@ -108,9 +116,13 @@ export class OrdenDetalleComponent implements OnInit {
   filtroRepuesto = '';
   // Iteración 3
   mo = { servicioId: '', descripcion: '', monto: null as number | null };
+  ext = { descripcion: '', cantidad: 1, origen: 'CLIENTE' as 'CLIENTE' | 'TALLER', costo: null as number | null, precio: null as number | null };
   descuento: number | null = null;
   pago = { monto: null as number | null, metodo: 'EFECTIVO' as MetodoPago, referencia: '' };
   readonly anulando = signal<Pago | null>(null);
+  /** RN-29: línea de costo que se está corrigiendo. */
+  readonly editando = signal<{ tipo: 'ext' | 'mo'; id: string; delCliente: boolean } | null>(null);
+  ed = { descripcion: '', cantidad: 1, precio: 0, costo: null as number | null, motivo: '' };
   motivoAnulacion = '';
 
   readonly siguientes = computed(() => {
@@ -141,6 +153,8 @@ export class OrdenDetalleComponent implements OnInit {
   );
   /** Diagnóstico, repuestos y mano de obra: se trabajan en diagnóstico y reparación. */
   readonly enTrabajo = computed(() => this.pasoActual() === 1 || this.pasoActual() === 2);
+  /** En diagnóstico se arma el precio: sin cobros (salvo que ya existan pagos). */
+  readonly presupuestando = computed(() => this.orden()?.estado === 'EN_DIAGNOSTICO' && !this.orden()?.pagos?.length);
   /** Ya pasó la etapa de trabajo (terminado, entregado o cancelado con costos). */
   readonly despuesTrabajo = computed(() => !this.enTrabajo() && this.orden()?.estado !== 'RECIBIDO');
   repuestoElegido() {
@@ -230,6 +244,60 @@ export class OrdenDetalleComponent implements OnInit {
   quitarManoObra(linea: ManoObra) {
     if (!confirm(`¿Quitar "${linea.descripcion}"?`)) return;
     this.ejecutar(() => this.datos.quitarManoObra(this.orden()!, linea));
+  }
+
+  async agregarExterno() {
+    await this.ejecutar(() =>
+      this.datos.agregarRepuestoExterno(this.orden()!, {
+        descripcion: this.ext.descripcion,
+        cantidad: Number(this.ext.cantidad),
+        origen: this.ext.origen,
+        costoUnitario: this.ext.costo == null ? null : Number(this.ext.costo),
+        precioUnitario: this.ext.precio == null ? null : Number(this.ext.precio),
+      }),
+    );
+    if (!this.error()) this.ext = { descripcion: '', cantidad: 1, origen: this.ext.origen, costo: null, precio: null };
+  }
+
+  quitarExterno(linea: RepuestoExterno) {
+    if (!confirm(`¿Quitar "${linea.descripcion}"?`)) return;
+    this.ejecutar(() => this.datos.quitarRepuestoExterno(this.orden()!, linea));
+  }
+
+  /** Después de aprobado el presupuesto, cambiar un precio exige explicar por qué. */
+  readonly pideMotivo = computed(() => this.orden()?.presupuestoAprobado != null);
+
+  editarExterno(l: RepuestoExterno) {
+    this.editando.set({ tipo: 'ext', id: l.id, delCliente: l.origen === 'CLIENTE' });
+    this.ed = { descripcion: l.descripcion, cantidad: l.cantidad, precio: l.precioUnitario, costo: l.costoUnitario, motivo: '' };
+  }
+
+  editarMano(l: ManoObra) {
+    this.editando.set({ tipo: 'mo', id: l.id, delCliente: false });
+    this.ed = { descripcion: l.descripcion, cantidad: 1, precio: l.monto, costo: null, motivo: '' };
+  }
+
+  async guardarEdicion() {
+    const e = this.editando()!;
+    const o = this.orden()!;
+    if (this.pideMotivo() && this.ed.motivo.trim().length < 3) {
+      return this.error.set('Explique por qué cambia el precio (el cliente ya aprobó el presupuesto)');
+    }
+    const motivo = this.ed.motivo.trim() || null;
+    await this.ejecutar(() => {
+      if (e.tipo === 'ext') {
+        const linea = o.externos!.find((l) => l.id === e.id)!;
+        return this.datos.editarRepuestoExterno(o, linea, {
+          cantidad: Number(this.ed.cantidad),
+          precioUnitario: Number(this.ed.precio),
+          costoUnitario: this.ed.costo == null || String(this.ed.costo) === '' ? null : Number(this.ed.costo),
+          motivo,
+        });
+      }
+      const linea = o.manoObra!.find((l) => l.id === e.id)!;
+      return this.datos.editarManoObra(o, linea, { descripcion: this.ed.descripcion, monto: Number(this.ed.precio), motivo });
+    });
+    if (!this.error()) this.editando.set(null);
   }
 
   aplicarDescuento() {
