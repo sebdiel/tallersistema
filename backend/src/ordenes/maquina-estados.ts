@@ -17,7 +17,8 @@ export enum EstadoOrden {
 export const TRANSICIONES: Record<EstadoOrden, EstadoOrden[]> = {
   [EstadoOrden.RECIBIDO]: [EstadoOrden.EN_DIAGNOSTICO, EstadoOrden.CANCELADO],
   [EstadoOrden.EN_DIAGNOSTICO]: [EstadoOrden.EN_REPARACION, EstadoOrden.CANCELADO],
-  [EstadoOrden.EN_REPARACION]: [EstadoOrden.TERMINADO, EstadoOrden.CANCELADO],
+  // RN-31: si al desarmar aparece otra falla, se vuelve a diagnóstico para rehacer el presupuesto.
+  [EstadoOrden.EN_REPARACION]: [EstadoOrden.TERMINADO, EstadoOrden.EN_DIAGNOSTICO, EstadoOrden.CANCELADO],
   [EstadoOrden.TERMINADO]: [EstadoOrden.ENTREGADO, EstadoOrden.EN_REPARACION],
   [EstadoOrden.ENTREGADO]: [],
   [EstadoOrden.CANCELADO]: [],
@@ -112,6 +113,10 @@ export function validarTransicion(
   // Reabrir una orden terminada exige explicar por qué.
   if (orden.estado === EstadoOrden.TERMINADO && destino === EstadoOrden.EN_REPARACION) {
     if (!comentario?.trim()) return 'Indique el motivo para reabrir la orden';
+  }
+  // RN-31: volver a diagnóstico exige indicar qué se encontró.
+  if (orden.estado === EstadoOrden.EN_REPARACION && destino === EstadoOrden.EN_DIAGNOSTICO) {
+    if (!comentario?.trim()) return 'Indique qué falla nueva se encontró';
   }
 
   return null;

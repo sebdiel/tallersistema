@@ -43,11 +43,17 @@
           @for (destino of siguientes(); track destino) {
             <button
               class="btn"
-              [class.btn-sec]="destino === 'CANCELADO' || (o.estado === 'TERMINADO' && destino === 'EN_REPARACION')"
+              [class.btn-sec]="destino === 'CANCELADO' || esRetroceso(destino)"
               [disabled]="procesando()"
               (click)="cambiarEstado(destino)"
             >
-              {{ o.estado === 'TERMINADO' && destino === 'EN_REPARACION' ? 'Reabrir reparación' : accionTexto[destino] }}
+              @if (o.estado === 'TERMINADO' && destino === 'EN_REPARACION') {
+                ← Reabrir reparación
+              } @else if (o.estado === 'EN_REPARACION' && destino === 'EN_DIAGNOSTICO') {
+                ← Volver a diagnóstico
+              } @else {
+                {{ accionTexto[destino] }}
+              }
             </button>
           }
         </div>
@@ -58,6 +64,7 @@
               @switch (destino) {
                 @case ('CANCELADO') { Motivo de la cancelación }
                 @case ('ENTREGADO') { Entrega a crédito (saldo Bs {{ totales()?.saldo | number: '1.2-2' }}): comentario }
+                @case ('EN_DIAGNOSTICO') { ¿Qué falla nueva se encontró? (se rehace el presupuesto) }
                 @default { Motivo para reabrir }
               }
             </label>

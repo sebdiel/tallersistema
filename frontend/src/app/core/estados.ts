@@ -8,7 +8,7 @@ import { EstadoOrden, OrdenTrabajo } from './models';
 export const TRANSICIONES: Record<EstadoOrden, EstadoOrden[]> = {
   RECIBIDO: ['EN_DIAGNOSTICO', 'CANCELADO'],
   EN_DIAGNOSTICO: ['EN_REPARACION', 'CANCELADO'],
-  EN_REPARACION: ['TERMINADO', 'CANCELADO'],
+  EN_REPARACION: ['TERMINADO', 'EN_DIAGNOSTICO', 'CANCELADO'],
   TERMINADO: ['ENTREGADO', 'EN_REPARACION'],
   ENTREGADO: [],
   CANCELADO: [],
@@ -92,6 +92,9 @@ export function validarTransicion(
   }
   if (orden.estado === 'TERMINADO' && destino === 'EN_REPARACION' && !comentario?.trim()) {
     return 'Indique el motivo para reabrir la orden';
+  }
+  if (orden.estado === 'EN_REPARACION' && destino === 'EN_DIAGNOSTICO' && !comentario?.trim()) {
+    return 'Indique qué falla nueva se encontró';
   }
   return null;
 }

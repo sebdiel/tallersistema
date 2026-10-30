@@ -184,11 +184,17 @@ export class OrdenDetalleComponent implements OnInit {
 
   // ---------------------------------------------------------------- acciones
 
+  /** Pasos hacia atrás (reabrir reparación, volver a diagnóstico): piden motivo. */
+  esRetroceso(destino: EstadoOrden) {
+    const e = this.orden()?.estado;
+    return (e === 'TERMINADO' && destino === 'EN_REPARACION') || (e === 'EN_REPARACION' && destino === 'EN_DIAGNOSTICO');
+  }
+
   cambiarEstado(destino: EstadoOrden) {
     const o = this.orden()!;
     const requiereMotivo =
       destino === 'CANCELADO' ||
-      (o.estado === 'TERMINADO' && destino === 'EN_REPARACION') ||
+      this.esRetroceso(destino) ||
       // RN-18: entregar a crédito (solo admin) exige comentario.
       (destino === 'ENTREGADO' && (this.totales()?.saldo ?? 0) > 0 && this.auth.tieneRol('ADMIN'));
     if (requiereMotivo && this.confirmando() !== destino) {

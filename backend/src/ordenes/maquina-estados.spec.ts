@@ -60,4 +60,15 @@ describe('Máquina de estados de la orden de trabajo', () => {
     expect(validarTransicion(terminada, E.EN_REPARACION)).toMatch(/reabrir/);
     expect(validarTransicion(terminada, E.EN_REPARACION, 'Sigue el ruido')).toBeNull();
   });
+
+  it('RN-31: de reparación se puede volver a diagnóstico indicando la falla nueva', () => {
+    const o = orden({ estado: E.EN_REPARACION, diagnostico: 'Pastillas gastadas' });
+    expect(validarTransicion(o, E.EN_DIAGNOSTICO)).toBe('Indique qué falla nueva se encontró');
+    expect(validarTransicion(o, E.EN_DIAGNOSTICO, 'El disco también está dañado')).toBeNull();
+  });
+
+  it('RN-30: no se termina una orden con adelanto mayor al total', () => {
+    const o = orden({ estado: E.EN_REPARACION, diagnostico: 'x', sinRepuestos: true, saldo: -50 });
+    expect(validarTransicion(o, E.TERMINADO)).toContain('pagó Bs 50.00 de más');
+  });
 });
