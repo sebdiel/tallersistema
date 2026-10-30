@@ -98,6 +98,18 @@
           <dd>{{ o.kilometrajeIngreso | number }} km</dd>
           <dt>Problema</dt>
           <dd>{{ o.problemaReportado }}</dd>
+          <dt>Entrega</dt>
+          <dd>
+            @if (editable()) {
+              <input type="date" class="fecha-entrega" [value]="o.fechaEntregaEstimada ?? ''" [disabled]="procesando()"
+                (change)="cambiarEntrega($any($event.target).value)" />
+            } @else {
+              {{ o.fechaEntregaEstimada ? (o.fechaEntregaEstimada + 'T12:00:00' | date: 'dd/MM/yyyy') : 'Sin fecha' }}
+            }
+            @if (atrasada()) {
+              <span class="atrasada">Atrasada</span>
+            }
+          </dd>
           @if (o.costoEstimado != null) {
             <dt>Costo estimado</dt>
             <dd>Bs {{ o.costoEstimado | number: '1.2-2' }} <span class="item-sub">(aprox. dicho al cliente)</span></dd>

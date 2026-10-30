@@ -43,6 +43,9 @@ import {
     .btn-icono.peligro:hover:not(:disabled) { color: #ef4444; border-color: #ef4444; background: #ef444414; }
     .btn-icono:disabled { opacity: 0.4; cursor: default; }
     td.num:has(.btn-icono) { white-space: nowrap; }
+    .fecha-entrega { width: auto; min-height: 34px; padding: 2px 8px; }
+    .atrasada { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+      background: #ef444422; color: #ef4444; font-size: 0.75rem; font-weight: 700; }
     .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
     .cambio { color: #f5b301; }
     .diferencia { color: #16a34a; }
@@ -305,6 +308,19 @@ export class OrdenDetalleComponent implements OnInit {
       return this.datos.editarManoObra(o, linea, { descripcion: this.ed.descripcion, monto: Number(this.ed.precio), motivo });
     });
     if (!this.error()) this.editando.set(null);
+  }
+
+  /** RN-26: la fecha acordada ya pasó y el vehículo no se entregó. */
+  readonly atrasada = computed(() => {
+    const o = this.orden();
+    if (!o?.fechaEntregaEstimada || !ESTADOS_ABIERTOS.includes(o.estado)) return false;
+    const d = new Date();
+    const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return o.fechaEntregaEstimada < hoy;
+  });
+
+  cambiarEntrega(fecha: string) {
+    this.ejecutar(() => this.datos.actualizarOrden(this.orden()!, { fechaEntregaEstimada: fecha || null }));
   }
 
   aplicarDescuento() {

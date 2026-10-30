@@ -390,7 +390,12 @@ export class DatosService {
 
   async actualizarOrden(
     o: OrdenTrabajo,
-    cambios: { diagnostico?: string | null; sinRepuestos?: boolean; observacionesRecepcion?: string | null },
+    cambios: {
+      diagnostico?: string | null;
+      sinRepuestos?: boolean;
+      observacionesRecepcion?: string | null;
+      fechaEntregaEstimada?: string | null;
+    },
   ) {
     this.verificarPermiso(o);
     if (!['RECIBIDO', ...ESTADOS_CON_REPUESTOS].includes(o.estado)) {
