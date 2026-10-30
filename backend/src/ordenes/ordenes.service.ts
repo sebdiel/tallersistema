@@ -38,6 +38,7 @@ import {
 import { HistorialEstado } from './historial-estado.entity';
 import {
   ESTADOS_ABIERTOS,
+  ESTADOS_ADELANTO,
   ESTADOS_CON_REPUESTOS,
   EstadoOrden,
   validarTransicion,
@@ -585,7 +586,7 @@ export class OrdenesService {
         throw new ConflictException('El pago ya fue registrado');
       }
       const t = await this.totalesDe(m, orden);
-      if (dto.monto > t.saldo + 0.001) {
+      if (!ESTADOS_ADELANTO.includes(orden.estado) && dto.monto > t.saldo + 0.001) {
         throw new BadRequestException(
           t.saldo <= 0
             ? 'La orden no tiene saldo pendiente'
@@ -632,6 +633,7 @@ export class OrdenesService {
 
   /** RN-17: quitar un cargo no puede dejar el total por debajo de lo ya pagado. */
   private async verificarTotalCubrePagos(m: EntityManager, orden: OrdenTrabajo, montoQuitado: number) {
+    if (ESTADOS_ADELANTO.includes(orden.estado)) return; // RN-30: el presupuesto todavía se está armando
     const t = await this.totalesDe(m, orden);
     if (t.total - montoQuitado < t.pagado - 0.001) {
       throw new BadRequestException(

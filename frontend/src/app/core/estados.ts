@@ -42,6 +42,9 @@ export const ACCION_ESTADO: Record<EstadoOrden, string> = {
   CANCELADO: 'Cancelar orden',
 };
 
+/** RN-30: antes de aprobar el presupuesto se aceptan adelantos sin tope (todavía no hay precio). */
+export const ESTADOS_ADELANTO: EstadoOrden[] = ['RECIBIDO', 'EN_DIAGNOSTICO'];
+
 export function validarTransicion(
   orden: Pick<OrdenTrabajo, 'estado' | 'diagnostico' | 'mecanicoId' | 'sinRepuestos'> & {
     totalRepuestos: number;
@@ -54,6 +57,10 @@ export function validarTransicion(
 ): string | null {
   if (!TRANSICIONES[orden.estado].includes(destino)) {
     return `No se puede pasar de ${orden.estado} a ${destino}`;
+  }
+  // RN-30: un adelanto puede superar el total mientras se arma el presupuesto, pero no se cierra así.
+  if ((destino === 'TERMINADO' || destino === 'ENTREGADO') && (orden.saldo ?? 0) < -0.001) {
+    return `El cliente pagó Bs ${(-(orden.saldo ?? 0)).toFixed(2)} de más. Anule el adelanto y registre el monto correcto`;
   }
   switch (destino) {
     case 'EN_DIAGNOSTICO':

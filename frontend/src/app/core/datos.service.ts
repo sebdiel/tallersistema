@@ -7,6 +7,7 @@ import { calcularTotales } from './costos';
 import { OperacionPendiente, db } from './db';
 import {
   ESTADOS_ABIERTOS,
+  ESTADOS_ADELANTO,
   ESTADOS_CON_REPUESTOS,
   validarTransicion,
 } from './estados';
@@ -771,7 +772,7 @@ export class DatosService {
     if (o.estado === 'CANCELADO') throw new Error('No se registran pagos en una orden cancelada');
     if (!(d.monto > 0)) throw new Error('El monto debe ser mayor a 0');
     const t = calcularTotales(o);
-    if (d.monto > t.saldo + 0.001) {
+    if (!ESTADOS_ADELANTO.includes(o.estado) && d.monto > t.saldo + 0.001) {
       throw new Error(
         t.saldo <= 0
           ? 'La orden no tiene saldo pendiente'
@@ -848,6 +849,7 @@ export class DatosService {
 
   /** RN-17: quitar un cargo no puede dejar el total por debajo de lo ya pagado. */
   private verificarTotalCubrePagos(o: OrdenTrabajo, montoQuitado: number) {
+    if (ESTADOS_ADELANTO.includes(o.estado)) return; // RN-30: el presupuesto todavía se está armando
     const t = calcularTotales(o);
     if (t.total - montoQuitado < t.pagado - 0.001) {
       throw new Error(

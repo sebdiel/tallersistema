@@ -467,9 +467,11 @@
 
     <!-- HU-19 / HU-21: costos y pagos -->
     @if (totales(); as t) {
-      @if (o.estado !== 'RECIBIDO' || o.pagos?.length) {
       <section class="card">
-        <h2>{{ presupuestando() ? 'Presupuesto' : 'Costo y pagos' }}</h2>
+        <h2>{{ o.estado === 'RECIBIDO' ? 'Adelanto del cliente' : presupuestando() ? 'Presupuesto' : 'Costo y pagos' }}</h2>
+        @if (o.estado === 'RECIBIDO') {
+          <p class="item-sub" style="margin-top: 0">Si el cliente deja dinero a cuenta al dejar el vehículo, regístrelo aquí.</p>
+        } @else {
         <dl class="datos">
           <dt>Repuestos</dt>
           <dd class="num">Bs {{ t.repuestos | number: '1.2-2' }}</dd>
@@ -507,6 +509,12 @@
           <dd class="num" [class.stock-bajo]="t.saldo > 0"><strong>Bs {{ t.saldo | number: '1.2-2' }}</strong></dd>
           }
         </dl>
+        }
+        @if (t.saldo < 0) {
+          <div class="alerta alerta-warn" style="margin-top: 8px">
+            Adelanto a favor del cliente: Bs {{ -t.saldo | number: '1.2-2' }}. Se descontará cuando se cargue el presupuesto.
+          </div>
+        }
 
         @if (o.pagos?.length) {
           <h2 style="margin-top: 16px">Pagos</h2>
@@ -553,7 +561,7 @@
           </div>
         }
 
-        @if (t.saldo > 0 && o.estado !== 'CANCELADO' && !presupuestando()) {
+        @if ((t.saldo > 0 || o.estado === 'RECIBIDO') && o.estado !== 'CANCELADO' && !presupuestando()) {
           <div class="grid-2" style="margin-top: 16px">
             <div class="campo">
               <label for="pm">Registrar pago (Bs)</label>
@@ -582,7 +590,6 @@
           </div>
         }
       </section>
-      }
     }
 
     <!-- Historial de estados -->

@@ -54,6 +54,9 @@ export interface OrdenParaTransicion {
  * Devuelve el motivo por el que la transición no está permitida,
  * o `null` si se puede realizar.
  */
+/** RN-30: antes de aprobar el presupuesto se aceptan adelantos sin tope (todavía no hay precio). */
+export const ESTADOS_ADELANTO: EstadoOrden[] = [EstadoOrden.RECIBIDO, EstadoOrden.EN_DIAGNOSTICO];
+
 export function validarTransicion(
   orden: OrdenParaTransicion,
   destino: EstadoOrden,
@@ -62,6 +65,11 @@ export function validarTransicion(
   // RN-08: solo transiciones definidas en la máquina de estados.
   if (!TRANSICIONES[orden.estado].includes(destino)) {
     return `No se puede pasar de ${orden.estado} a ${destino}`;
+  }
+
+  // RN-30: un adelanto puede superar el total mientras se arma el presupuesto, pero no se cierra así.
+  if ((destino === EstadoOrden.TERMINADO || destino === EstadoOrden.ENTREGADO) && (orden.saldo ?? 0) < -0.001) {
+    return `El cliente pagó Bs ${(-(orden.saldo ?? 0)).toFixed(2)} de más. Anule el adelanto y registre el monto correcto`;
   }
 
   switch (destino) {
