@@ -166,7 +166,15 @@
     <!-- Repuestos utilizados: en diagnóstico/reparación, o como resumen si tiene -->
     @if (enTrabajo() || o.repuestos?.length) {
     <section class="card">
-      <h2>Repuestos utilizados</h2>
+      <div class="cab-seccion">
+        <h2>Repuestos utilizados</h2>
+        @if (conRepuestos()) {
+          <div class="cab-botones">
+            <button class="btn" (click)="abrir('rep')"><app-icono nombre="agregar" /> Del inventario</button>
+            <button class="btn btn-sec" (click)="abrir('ext')"><app-icono nombre="agregar" /> Externo</button>
+          </div>
+        }
+      </div>
       @if (o.repuestos?.length) {
         <table class="tabla">
           <thead>
@@ -222,56 +230,7 @@
       }
 
       @if (conRepuestos()) {
-        <div style="margin-top: 16px">
-          <input
-            class="buscador"
-            placeholder="Buscar repuesto por nombre o código…"
-            [(ngModel)]="filtroRepuesto"
-            (ngModelChange)="filtrarRepuestos()"
-            style="margin-bottom: 8px"
-          />
-          <div class="agregar">
-            <div class="campo">
-              <label for="rep">Repuesto</label>
-              <select id="rep" [(ngModel)]="repuestoId">
-                <option value="">Seleccione…</option>
-                @for (r of repuestos(); track r.id) {
-                  <option [value]="r.id" [disabled]="r.stock <= 0">
-                    {{ r.nombre }} ({{ r.codigo }}) — stock {{ r.stock }}
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="campo">
-              <label for="cant">Cantidad</label>
-              <input id="cant" type="number" inputmode="decimal" min="0.01" step="0.5" [(ngModel)]="cantidad" />
-            </div>
-            <button class="btn" [disabled]="procesando() || !repuestoId" (click)="agregarRepuesto()">Agregar</button>
-          </div>
-          @if (repuestoElegido(); as r) {
-            <p class="item-sub" [class.stock-bajo]="r.stock <= r.stockMinimo">
-              Disponible: {{ r.stock }} {{ r.unidad.toLowerCase() }} · Precio: Bs {{ r.precioVenta | number: '1.2-2' }}
-            </p>
-          }
-
-          <!-- RN-28: repuesto que no está en el inventario, con precio puesto a mano -->
-          @if (filtroRepuesto.trim().length >= 2) {
-            <div class="rep-libre">
-              <span class="item-sub">
-                @if (!repuestos().length) { No está en el inventario. }
-                ¿Agregar <strong>«{{ filtroRepuesto.trim() }}»</strong> con su precio?
-              </span>
-              <div class="rep-libre-fila">
-                <label>Precio (Bs c/u)
-                  <input type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="libre.precio" />
-                </label>
-                <label>Cantidad
-                  <input type="number" min="1" step="1" inputmode="decimal" [(ngModel)]="libre.cantidad" />
-                </label>
-                <button class="btn" [disabled]="procesando() || libre.precio == null" (click)="agregarRepuestoLibre()">Agregar como ítem</button>
-              </div>
-            </div>
-          }
+        <div>
 
           @if (!o.repuestos?.length && !o.externos?.length) {
             <label style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
@@ -285,7 +244,7 @@
     }
 
     <!-- RN-28: repuestos fuera del inventario -->
-    @if (enTrabajo() || o.externos?.length) {
+    @if (o.externos?.length) {
     <section class="card">
       <h2>Repuestos externos</h2>
       <p class="item-sub" style="margin-top: 0">Repuestos que no son del inventario: los trae el cliente o el taller los compra afuera.</p>
@@ -374,47 +333,20 @@
         </div>
       }
 
-      @if (costosEditables() && enTrabajo()) {
-        <div class="filtros" style="margin-top: 12px">
-          <button type="button" [class.activo]="ext.origen === 'CLIENTE'" (click)="ext.origen = 'CLIENTE'">Lo trae el cliente</button>
-          <button type="button" [class.activo]="ext.origen === 'TALLER'" (click)="ext.origen = 'TALLER'">Lo compra el taller</button>
-        </div>
-        <div class="grid-2">
-          <div class="campo">
-            <label for="exd">Repuesto</label>
-            <input id="exd" [(ngModel)]="ext.descripcion" placeholder="Ej.: espejo lateral izquierdo" />
-          </div>
-          <div class="campo">
-            <label for="exc">Cantidad</label>
-            <input id="exc" type="number" min="0.01" step="1" inputmode="decimal" [(ngModel)]="ext.cantidad" />
-          </div>
-          @if (ext.origen === 'TALLER') {
-            <div class="campo">
-              <label for="excos">Lo que pagó el taller (Bs c/u)</label>
-              <input id="excos" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ext.costo" placeholder="Opcional" />
-            </div>
-            <div class="campo">
-              <label for="expre">Se cobra al cliente (Bs c/u)</label>
-              <input id="expre" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ext.precio" />
-            </div>
-          }
-          <div class="campo" style="justify-content: flex-end">
-            <button class="btn" [disabled]="procesando() || !ext.descripcion || (ext.origen === 'TALLER' && ext.precio == null)" (click)="agregarExterno()">
-              Agregar repuesto externo
-            </button>
-          </div>
-        </div>
-        @if (ext.origen === 'CLIENTE') {
-          <p class="item-sub">No se cobra: queda registrado que el repuesto lo puso el cliente. Cobre la instalación en Mano de obra.</p>
-        }
-      }
     </section>
     }
 
     <!-- HU-18: mano de obra -->
     @if (enTrabajo() || o.manoObra?.length) {
     <section class="card">
-      <h2>Mano de obra</h2>
+      <div class="cab-seccion">
+        <h2>Mano de obra</h2>
+        @if (costosEditables() && enTrabajo()) {
+          <div class="cab-botones">
+            <button class="btn" (click)="abrir('mo')"><app-icono nombre="agregar" /> Agregar</button>
+          </div>
+        }
+      </div>
       @if (o.manoObra?.length) {
         <table class="tabla">
           <tbody>
@@ -474,32 +406,6 @@
         </div>
       }
 
-      @if (costosEditables() && enTrabajo()) {
-        <div class="grid-2" style="margin-top: 12px">
-          <div class="campo">
-            <label for="srv">Servicio del catálogo</label>
-            <select id="srv" [ngModel]="mo.servicioId" (ngModelChange)="elegirServicio($event)">
-              <option value="">— Trabajo libre —</option>
-              @for (s of servicios(); track s.id) {
-                <option [value]="s.id">{{ s.nombre }} — Bs {{ s.precio | number: '1.2-2' }}</option>
-              }
-            </select>
-          </div>
-          <div class="campo">
-            <label for="mod">Descripción</label>
-            <input id="mod" [(ngModel)]="mo.descripcion" placeholder="Trabajo realizado" />
-          </div>
-          <div class="campo">
-            <label for="mom">Monto (Bs)</label>
-            <input id="mom" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="mo.monto" />
-          </div>
-          <div class="campo" style="justify-content: flex-end">
-            <button class="btn" [disabled]="procesando() || !mo.descripcion || mo.monto == null" (click)="agregarManoObra()">
-              Agregar mano de obra
-            </button>
-          </div>
-        </div>
-      }
     </section>
     }
 
@@ -651,6 +557,152 @@
         <p class="item-sub">El historial no está disponible sin conexión.</p>
       }
     </section>
+
+    <!-- Formularios para agregar costos (ventanas emergentes) -->
+      @if (modal() === 'rep') {
+        <div class="modal-velo" (click)="modal.set(null)">
+          <div class="modal-form" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+            <div class="modal-form-cab">
+              <h2><app-icono nombre="inventario" /> Agregar repuesto del inventario</h2>
+              <button type="button" class="cerrar" (click)="modal.set(null)" aria-label="Cerrar"><app-icono nombre="quitar" /></button>
+            </div>
+            @if (error()) {
+              <div class="alerta alerta-error">{{ error() }}</div>
+            }
+          <input
+            class="buscador"
+            placeholder="Buscar repuesto por nombre o código…"
+            [(ngModel)]="filtroRepuesto"
+            (ngModelChange)="filtrarRepuestos()"
+            style="margin-bottom: 8px"
+          />
+          <div class="agregar">
+            <div class="campo">
+              <label for="rep">Repuesto</label>
+              <select id="rep" [(ngModel)]="repuestoId">
+                <option value="">Seleccione…</option>
+                @for (r of repuestos(); track r.id) {
+                  <option [value]="r.id" [disabled]="r.stock <= 0">
+                    {{ r.nombre }} ({{ r.codigo }}) — stock {{ r.stock }}
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="campo">
+              <label for="cant">Cantidad</label>
+              <input id="cant" type="number" inputmode="decimal" min="0.01" step="0.5" [(ngModel)]="cantidad" />
+            </div>
+            <button class="btn" [disabled]="procesando() || !repuestoId" (click)="agregarRepuesto()">Agregar</button>
+          </div>
+          @if (repuestoElegido(); as r) {
+            <p class="item-sub" [class.stock-bajo]="r.stock <= r.stockMinimo">
+              Disponible: {{ r.stock }} {{ r.unidad.toLowerCase() }} · Precio: Bs {{ r.precioVenta | number: '1.2-2' }}
+            </p>
+          }
+
+          <!-- RN-28: repuesto que no está en el inventario, con precio puesto a mano -->
+          @if (filtroRepuesto.trim().length >= 2) {
+            <div class="rep-libre">
+              <span class="item-sub">
+                @if (!repuestos().length) { No está en el inventario. }
+                ¿Agregar <strong>«{{ filtroRepuesto.trim() }}»</strong> con su precio?
+              </span>
+              <div class="rep-libre-fila">
+                <label>Precio (Bs c/u)
+                  <input type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="libre.precio" />
+                </label>
+                <label>Cantidad
+                  <input type="number" min="1" step="1" inputmode="decimal" [(ngModel)]="libre.cantidad" />
+                </label>
+                <button class="btn" [disabled]="procesando() || libre.precio == null" (click)="agregarRepuestoLibre()">Agregar como ítem</button>
+              </div>
+            </div>
+          }
+          </div>
+        </div>
+      }
+      @if (modal() === 'ext') {
+        <div class="modal-velo" (click)="modal.set(null)">
+          <div class="modal-form" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+            <div class="modal-form-cab">
+              <h2><app-icono nombre="vehiculos" /> Agregar repuesto externo</h2>
+              <button type="button" class="cerrar" (click)="modal.set(null)" aria-label="Cerrar"><app-icono nombre="quitar" /></button>
+            </div>
+            @if (error()) {
+              <div class="alerta alerta-error">{{ error() }}</div>
+            }
+        <div class="filtros" style="margin-top: 12px">
+          <button type="button" [class.activo]="ext.origen === 'CLIENTE'" (click)="ext.origen = 'CLIENTE'">Lo trae el cliente</button>
+          <button type="button" [class.activo]="ext.origen === 'TALLER'" (click)="ext.origen = 'TALLER'">Lo compra el taller</button>
+        </div>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="exd">Repuesto</label>
+            <input id="exd" [(ngModel)]="ext.descripcion" placeholder="Ej.: espejo lateral izquierdo" />
+          </div>
+          <div class="campo">
+            <label for="exc">Cantidad</label>
+            <input id="exc" type="number" min="0.01" step="1" inputmode="decimal" [(ngModel)]="ext.cantidad" />
+          </div>
+          @if (ext.origen === 'TALLER') {
+            <div class="campo">
+              <label for="excos">Lo que pagó el taller (Bs c/u)</label>
+              <input id="excos" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ext.costo" placeholder="Opcional" />
+            </div>
+            <div class="campo">
+              <label for="expre">Se cobra al cliente (Bs c/u)</label>
+              <input id="expre" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="ext.precio" />
+            </div>
+          }
+          <div class="campo" style="justify-content: flex-end">
+            <button class="btn" [disabled]="procesando() || !ext.descripcion || (ext.origen === 'TALLER' && ext.precio == null)" (click)="agregarExterno()">
+              Agregar repuesto externo
+            </button>
+          </div>
+        </div>
+        @if (ext.origen === 'CLIENTE') {
+          <p class="item-sub">No se cobra: queda registrado que el repuesto lo puso el cliente. Cobre la instalación en Mano de obra.</p>
+        }
+                </div>
+        </div>
+      }
+      @if (modal() === 'mo') {
+        <div class="modal-velo" (click)="modal.set(null)">
+          <div class="modal-form" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+            <div class="modal-form-cab">
+              <h2><app-icono nombre="llave" /> Agregar mano de obra</h2>
+              <button type="button" class="cerrar" (click)="modal.set(null)" aria-label="Cerrar"><app-icono nombre="quitar" /></button>
+            </div>
+            @if (error()) {
+              <div class="alerta alerta-error">{{ error() }}</div>
+            }
+        <div class="grid-2" style="margin-top: 12px">
+          <div class="campo">
+            <label for="srv">Servicio del catálogo</label>
+            <select id="srv" [ngModel]="mo.servicioId" (ngModelChange)="elegirServicio($event)">
+              <option value="">— Trabajo libre —</option>
+              @for (s of servicios(); track s.id) {
+                <option [value]="s.id">{{ s.nombre }} — Bs {{ s.precio | number: '1.2-2' }}</option>
+              }
+            </select>
+          </div>
+          <div class="campo">
+            <label for="mod">Descripción</label>
+            <input id="mod" [(ngModel)]="mo.descripcion" placeholder="Trabajo realizado" />
+          </div>
+          <div class="campo">
+            <label for="mom">Monto (Bs)</label>
+            <input id="mom" type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="mo.monto" />
+          </div>
+          <div class="campo" style="justify-content: flex-end">
+            <button class="btn" [disabled]="procesando() || !mo.descripcion || mo.monto == null" (click)="agregarManoObra()">
+              Agregar mano de obra
+            </button>
+          </div>
+        </div>
+                </div>
+        </div>
+      }
   } @else if (error()) {
     <div class="alerta alerta-error">{{ error() }}</div>
   } @else {

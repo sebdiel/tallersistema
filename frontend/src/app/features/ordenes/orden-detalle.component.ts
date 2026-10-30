@@ -53,6 +53,19 @@ import {
     .rep-libre-fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 8px; }
     .rep-libre-fila label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--texto-suave); }
     .rep-libre-fila input { width: 130px; }
+    .cab-seccion { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .cab-seccion h2 { margin: 0; }
+    .cab-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cab-botones .btn { min-height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; }
+    .modal-velo { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+      padding: 16px; background: rgba(0, 0, 0, 0.6); }
+    .modal-form { width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 22px; border-radius: 16px;
+      background: var(--superficie); color: var(--texto); border-top: 5px solid #f5b301; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); }
+    .modal-form-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .modal-form-cab h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+    .cerrar { display: inline-flex; padding: 6px; border: none; border-radius: 8px; background: transparent;
+      color: var(--texto-suave); font-size: 1.2rem; cursor: pointer; }
+    .cerrar:hover { color: var(--texto); background: #ffffff12; }
     .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
     .cambio { color: #f5b301; }
     .diferencia { color: #16a34a; }
@@ -131,6 +144,8 @@ export class OrdenDetalleComponent implements OnInit {
   repuestoId = '';
   cantidad = 1;
   filtroRepuesto = '';
+  /** Ventana emergente abierta para agregar costos. */
+  readonly modal = signal<'rep' | 'ext' | 'mo' | null>(null);
   libre = { precio: null as number | null, cantidad: 1 };
   // Iteración 3
   mo = { servicioId: '', descripcion: '', monto: null as number | null };
@@ -229,6 +244,11 @@ export class OrdenDetalleComponent implements OnInit {
     this.ejecutar(() => this.datos.asignarMecanico(this.orden()!, mecanicoId || null));
   }
 
+  abrir(m: 'rep' | 'ext' | 'mo') {
+    this.error.set(null);
+    this.modal.set(m);
+  }
+
   async agregarRepuesto() {
     if (!this.repuestoId) return this.error.set('Seleccione un repuesto');
     await this.ejecutar(() =>
@@ -236,6 +256,7 @@ export class OrdenDetalleComponent implements OnInit {
     );
     this.repuestoId = '';
     this.cantidad = 1;
+    if (!this.error()) this.modal.set(null);
   }
 
   quitar(linea: OrdenRepuesto) {
@@ -256,6 +277,7 @@ export class OrdenDetalleComponent implements OnInit {
     if (!this.error()) {
       this.filtroRepuesto = '';
       this.libre = { precio: null, cantidad: 1 };
+      this.modal.set(null);
       this.filtrarRepuestos();
     }
   }
@@ -279,7 +301,10 @@ export class OrdenDetalleComponent implements OnInit {
         monto: Number(this.mo.monto),
       }),
     );
-    if (!this.error()) this.mo = { servicioId: '', descripcion: '', monto: null };
+    if (!this.error()) {
+      this.mo = { servicioId: '', descripcion: '', monto: null };
+      this.modal.set(null);
+    }
   }
 
   quitarManoObra(linea: ManoObra) {
@@ -297,7 +322,10 @@ export class OrdenDetalleComponent implements OnInit {
         precioUnitario: this.ext.precio == null ? null : Number(this.ext.precio),
       }),
     );
-    if (!this.error()) this.ext = { descripcion: '', cantidad: 1, origen: this.ext.origen, costo: null, precio: null };
+    if (!this.error()) {
+      this.ext = { descripcion: '', cantidad: 1, origen: this.ext.origen, costo: null, precio: null };
+      this.modal.set(null);
+    }
   }
 
   quitarExterno(linea: RepuestoExterno) {
