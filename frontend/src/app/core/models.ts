@@ -217,6 +217,8 @@ export interface OrdenTrabajo {
   costoEstimado?: number | null;
   /** RN-29: total que aceptó el cliente al iniciar la reparación (Bs). */
   presupuestoAprobado?: number | null;
+  /** RN-33: repuestos elegidos en la recepción. */
+  repuestosSugeridos?: RepuestoSugerido[] | null;
   vehiculo?: Vehiculo;
   cliente?: Cliente;
   mecanico?: Persona | null;
@@ -286,6 +288,12 @@ export interface RepuestoExterno {
   costoUnitario: number | null;
   precioUnitario: number;
   motivoCambio?: string | null;
+}
+
+export interface RepuestoSugerido {
+  repuestoId: string;
+  nombre: string;
+  cantidad: number;
 }
 
 export type MetodoPago = 'EFECTIVO' | 'QR' | 'TRANSFERENCIA' | 'TARJETA';

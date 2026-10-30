@@ -1,10 +1,11 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/auth.interceptor';
 import { ConexionService } from '../../core/conexion.service';
 import { DatosService } from '../../core/datos.service';
-import { Cliente, OrdenTrabajo, Vehiculo } from '../../core/models';
+import { Cliente, OrdenTrabajo, Repuesto, Servicio, Vehiculo } from '../../core/models';
 import { IconoComponent } from '../../layout/icono.component';
 
 type Modo = 'existente' | 'nuevo';
@@ -25,7 +26,7 @@ const hoyLocal = () => aIso(new Date());
 @Component({
   selector: 'app-orden-nueva',
   standalone: true,
-  imports: [IconoComponent, ReactiveFormsModule, RouterLink],
+  imports: [IconoComponent, ReactiveFormsModule, RouterLink, DecimalPipe],
   template: `
     <div class="pagina">
       <div class="encabezado">
@@ -94,56 +95,24 @@ const hoyLocal = () => aIso(new Date());
             </ul>
           }
         } @else {
-          <form [formGroup]="nuevo" class="grid-2">
-            <div class="campo">
-              <label class="req" for="placa">Placa</label>
-              <input id="placa" formControlName="placa" autocapitalize="characters" placeholder="2345ABC" />
+          <div class="item resumen-nuevo">
+            <div>
+              <div class="item-titulo">
+                <app-icono nombre="agregar" /> Vehículo nuevo:
+                {{ nuevo.value.marca || '—' }} {{ nuevo.value.modelo }} {{ nuevo.value.anio ?? '' }}
+              </div>
+              <div class="item-sub">
+                <app-icono nombre="clientes" />
+                {{ clienteNuevo() ? (cliente.value.nombre || 'Cliente nuevo') : (nombreClienteElegido() || 'Sin propietario') }}
+              </div>
             </div>
-            <div class="campo">
-              <label for="anio">Año</label>
-              <input id="anio" type="number" inputmode="numeric" formControlName="anio" />
+            <div>
+              @if (nuevo.value.placa) {
+                <span class="placa">{{ nuevo.value.placa }}</span>
+              }
+              <button type="button" class="btn btn-sec" style="margin-left: 8px" (click)="modalNuevo.set(true)">Editar</button>
             </div>
-            <div class="campo">
-              <label class="req" for="marca">Marca</label>
-              <input id="marca" formControlName="marca" />
-            </div>
-            <div class="campo">
-              <label class="req" for="modelo">Modelo</label>
-              <input id="modelo" formControlName="modelo" />
-            </div>
-          </form>
-
-          <h2 style="margin-top: 16px">Propietario</h2>
-          <div class="filtros" style="margin-top: 0">
-            <button type="button" [class.activo]="!clienteNuevo()" (click)="clienteNuevo.set(false)">Cliente registrado</button>
-            <button type="button" [class.activo]="clienteNuevo()" (click)="clienteNuevo.set(true)">Cliente nuevo</button>
           </div>
-          @if (clienteNuevo()) {
-            <form [formGroup]="cliente" class="grid-2">
-              <div class="campo">
-                <label class="req" for="cnombre">Nombre</label>
-                <input id="cnombre" formControlName="nombre" />
-              </div>
-              <div class="campo">
-                <label class="req" for="ctel">Teléfono</label>
-                <input id="ctel" type="tel" inputmode="tel" formControlName="telefono" />
-              </div>
-              <div class="campo">
-                <label for="cci">CI / NIT</label>
-                <input id="cci" formControlName="ciNit" />
-              </div>
-            </form>
-          } @else {
-            <div class="campo">
-              <input class="buscador" placeholder="Filtrar por nombre o teléfono…" (input)="buscarCliente($any($event.target).value)" />
-              <select [formControl]="clienteId" style="margin-top: 6px">
-                <option value="">Seleccione…</option>
-                @for (c of clientes(); track c.id) {
-                  <option [value]="c.id">{{ c.nombre }} — {{ c.telefono }}</option>
-                }
-              </select>
-            </div>
-          }
         }
       </section>
 
@@ -151,8 +120,76 @@ const hoyLocal = () => aIso(new Date());
       <form class="card" [formGroup]="form" (ngSubmit)="guardar()">
         <h2>2. Recepción</h2>
         <div class="campo">
-          <label class="req" for="problema">Problema reportado por el cliente</label>
-          <textarea id="problema" rows="3" formControlName="problemaReportado" placeholder="Ej.: ruido al frenar, revisar aceite"></textarea>
+          <label class="req" for="problema">Motivo de ingreso</label>
+          <textarea id="problema" rows="3" formControlName="problemaReportado" placeholder="Ej.: ruido al frenar, cambio de aceite"></textarea>
+        </div>
+
+        <!-- RN-33: servicios y repuestos del catálogo como motivo de ingreso -->
+        <div class="campo" style="margin-top: 12px">
+          <label for="sug">Agregar servicio o repuesto</label>
+          <input id="sug" class="buscador" placeholder="Escriba, ej.: cambio, aceite, pastillas…" [value]="busquedaItem()"
+            (input)="buscarItem($any($event.target).value)" autocomplete="off" />
+          @if (busquedaItem().trim().length >= 2) {
+            <div class="sugerencias">
+              <div class="sug-cab">Sugerencias</div>
+              @for (s of sugServicios(); track s.id) {
+                <button type="button" class="sug" (click)="agregarItem('SERVICIO', s.id, s.nombre, s.precio)">
+                  <span class="sug-nombre">{{ s.nombre }}</span>
+                  <span class="pill servicio">Servicio</span>
+                  <span class="pill precio">Bs {{ s.precio | number: '1.2-2' }}</span>
+                </button>
+              }
+              @for (r of sugRepuestos(); track r.id) {
+                <button type="button" class="sug" (click)="agregarItem('REPUESTO', r.id, r.nombre, r.precioVenta)">
+                  <span class="sug-nombre">{{ r.nombre }} <small>{{ r.codigo }}</small></span>
+                  <span class="pill repuesto">Repuesto</span>
+                  <span class="pill precio">Bs {{ r.precioVenta | number: '1.2-2' }}</span>
+                  <span class="pill" [class.sin-stock]="r.stock <= 0">Stock: {{ r.stock }}</span>
+                </button>
+              }
+              @if (!sugServicios().length && !sugRepuestos().length) {
+                <p class="item-sub" style="margin: 8px">No está en Servicios ni en Inventario.</p>
+              }
+              <div class="sug-nuevo">
+                <span>Agregar <strong>«{{ busquedaItem().trim() }}»</strong> como ítem nuevo:</span>
+                <button type="button" class="btn btn-sec" (click)="agregarLibre('SERVICIO')">+ Trabajo</button>
+                <button type="button" class="btn btn-sec" (click)="agregarLibre('REPUESTO')">+ Repuesto</button>
+              </div>
+            </div>
+          }
+          @if (items().length) {
+            <ul class="items-elegidos">
+              @for (it of items(); track it.id) {
+                <li class="item-elegido">
+                  <div class="fila-item">
+                    <span class="pill" [class.servicio]="it.tipo === 'SERVICIO'" [class.repuesto]="it.tipo === 'REPUESTO'">
+                      {{ it.tipo === 'SERVICIO' ? 'Trabajo' : 'Repuesto' }}{{ it.libre ? ' nuevo' : '' }}
+                    </span>
+                    <span class="sug-nombre">{{ it.nombre }}</span>
+                    <strong class="num">Bs {{ it.precio * it.cantidad | number: '1.2-2' }}</strong>
+                  </div>
+                  <div class="fila-item">
+                    <label class="valor-u">Valor/u (Bs)
+                      <input type="number" min="0" step="0.5" inputmode="decimal" [value]="it.precio"
+                        [disabled]="it.tipo === 'REPUESTO' && !it.libre"
+                        [title]="it.tipo === 'REPUESTO' && !it.libre ? 'Precio del inventario' : ''"
+                        (input)="cambiarPrecio(it.id, +$any($event.target).value)" />
+                    </label>
+                    <div class="contador">
+                      <button type="button" (click)="cambiarCantidad(it.id, it.cantidad - 1)" [disabled]="it.cantidad <= 1">−</button>
+                      <span>{{ it.cantidad }}</span>
+                      <button type="button" (click)="cambiarCantidad(it.id, it.cantidad + 1)">+</button>
+                    </div>
+                    <button type="button" class="quitar" (click)="quitarItem(it.id)" aria-label="Quitar"><app-icono nombre="quitar" /></button>
+                  </div>
+                </li>
+              }
+              <li class="total-items">
+                <span>Total sugerido</span>
+                <strong class="num">Bs {{ totalItems() | number: '1.2-2' }}</strong>
+              </li>
+            </ul>
+          }
         </div>
         <div class="grid-2" style="margin-top: 12px">
           <div class="campo">
@@ -203,6 +240,74 @@ const hoyLocal = () => aIso(new Date());
       </form>
     </div>
 
+    @if (modalNuevo()) {
+      <div class="modal-velo" (click)="cerrarNuevo()">
+        <div class="modal-form" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+          <div class="modal-form-cab">
+            <h2><app-icono nombre="vehiculos" /> Registrar vehículo nuevo</h2>
+            <button type="button" class="cerrar" (click)="cerrarNuevo()" aria-label="Cerrar"><app-icono nombre="quitar" /></button>
+          </div>
+          @if (errorNuevo()) {
+            <div class="alerta alerta-error">{{ errorNuevo() }}</div>
+          }
+          <form [formGroup]="nuevo" class="grid-2">
+            <div class="campo">
+              <label class="req" for="placa">Placa</label>
+              <input id="placa" formControlName="placa" autocapitalize="characters" placeholder="2345ABC" />
+            </div>
+            <div class="campo">
+              <label for="anio">Año</label>
+              <input id="anio" type="number" inputmode="numeric" formControlName="anio" />
+            </div>
+            <div class="campo">
+              <label class="req" for="marca">Marca</label>
+              <input id="marca" formControlName="marca" />
+            </div>
+            <div class="campo">
+              <label class="req" for="modelo">Modelo</label>
+              <input id="modelo" formControlName="modelo" />
+            </div>
+          </form>
+
+          <h2 style="margin-top: 16px">Propietario</h2>
+          <div class="filtros" style="margin-top: 0">
+            <button type="button" [class.activo]="!clienteNuevo()" (click)="clienteNuevo.set(false)">Cliente registrado</button>
+            <button type="button" [class.activo]="clienteNuevo()" (click)="clienteNuevo.set(true)">Cliente nuevo</button>
+          </div>
+          @if (clienteNuevo()) {
+            <form [formGroup]="cliente" class="grid-2">
+              <div class="campo">
+                <label class="req" for="cnombre">Nombre</label>
+                <input id="cnombre" formControlName="nombre" />
+              </div>
+              <div class="campo">
+                <label class="req" for="ctel">Teléfono</label>
+                <input id="ctel" type="tel" inputmode="tel" formControlName="telefono" />
+              </div>
+              <div class="campo">
+                <label for="cci">CI / NIT</label>
+                <input id="cci" formControlName="ciNit" />
+              </div>
+            </form>
+          } @else {
+            <div class="campo">
+              <input class="buscador" placeholder="Filtrar por nombre o teléfono…" (input)="buscarCliente($any($event.target).value)" />
+              <select [formControl]="clienteId" style="margin-top: 6px">
+                <option value="">Seleccione…</option>
+                @for (c of clientes(); track c.id) {
+                  <option [value]="c.id">{{ c.nombre }} — {{ c.telefono }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div class="acciones">
+            <button type="button" class="btn btn-sec" (click)="cerrarNuevo()">Cancelar</button>
+            <button type="button" class="btn" (click)="confirmarNuevo()">Listo</button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (confirmar(); as c) {
       <div class="modal-velo">
         <div class="modal-aviso" role="alertdialog" aria-modal="true">
@@ -222,6 +327,45 @@ const hoyLocal = () => aIso(new Date());
     }
   `,
   styles: `
+    .sugerencias { margin-top: 6px; padding: 6px; border: 1px solid #f5b301; border-radius: 12px; background: var(--superficie);
+      max-height: 280px; overflow-y: auto; }
+    .sug-cab { padding: 4px 8px; font-size: 0.8rem; color: var(--texto-suave); }
+    .sug { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; margin-top: 6px; padding: 10px 12px;
+      border: 1px solid var(--borde); border-radius: 10px; background: transparent; color: var(--texto); font: inherit;
+      text-align: left; cursor: pointer; }
+    .sug:hover { border-color: #f5b301; background: #f5b30110; }
+    .sug-nombre { flex: 1 1 160px; font-weight: 600; }
+    .sug-nombre small { color: var(--texto-suave); font-weight: 400; }
+    .pill { padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #ffffff14; }
+    .pill.precio { background: #16a34a26; color: #4ade80; }
+    .pill.servicio { background: #f5b30126; color: #f5b301; }
+    .pill.repuesto { background: #3b82f626; color: #60a5fa; }
+    .pill.sin-stock { background: #ef444426; color: #f87171; }
+    .items-elegidos { list-style: none; margin: 10px 0 0; padding: 0; border: 1px solid var(--borde); border-radius: 12px; }
+    .items-elegidos li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--borde); }
+    .items-elegidos li:last-child { border-bottom: none; }
+    .items-elegidos li.item-elegido { flex-direction: column; align-items: stretch; gap: 8px; }
+    .fila-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .valor-u { display: flex; align-items: center; gap: 8px; flex: 1 1 200px; font-size: 0.85rem; color: var(--texto-suave); }
+    .valor-u input { flex: 1; min-height: 34px; padding: 2px 8px; }
+    .contador { display: inline-flex; align-items: center; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+    .contador button { width: 34px; height: 34px; border: none; background: #f5b301; color: #1a1a1a; font-size: 1.1rem; font-weight: 800; cursor: pointer; }
+    .contador button:disabled { opacity: 0.4; cursor: default; }
+    .contador span { min-width: 36px; text-align: center; font-weight: 700; }
+    .sug-nuevo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 12px;
+      border-top: 1px dashed var(--borde); }
+    .sug-nuevo span { flex: 1 1 200px; }
+    .items-elegidos .quitar { display: inline-flex; padding: 4px; border: none; background: transparent; color: var(--texto-suave); cursor: pointer; }
+    .items-elegidos .quitar:hover { color: #ef4444; }
+    .total-items { justify-content: space-between; background: #f5b30112; }
+    .modal-form { width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; padding: 22px; border-radius: 16px;
+      background: var(--superficie); color: var(--texto); border-top: 5px solid #f5b301; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); }
+    .modal-form-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .modal-form-cab h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+    .cerrar { display: inline-flex; padding: 6px; border: none; border-radius: 8px; background: transparent;
+      color: var(--texto-suave); font-size: 1.2rem; cursor: pointer; }
+    .cerrar:hover { color: var(--texto); background: #ffffff12; }
+    .resumen-nuevo { box-shadow: none; border: 1px dashed #f5b301; }
     .calendario { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
     .dia { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px;
       border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); font: inherit; cursor: pointer; }
@@ -259,6 +403,10 @@ export class OrdenNuevaComponent implements OnInit {
 
   readonly modo = signal<Modo>('existente');
   readonly clienteNuevo = signal(false);
+  /** Ventana emergente para registrar vehículo (y dueño) nuevos. */
+  readonly modalNuevo = signal(false);
+  readonly errorNuevo = signal<string | null>(null);
+  private nuevoConfirmado = false;
   readonly vehiculo = signal<Vehiculo | null>(null);
   readonly vehiculos = signal<Vehiculo[]>([]);
   readonly clientes = signal<Cliente[]>([]);
@@ -286,6 +434,17 @@ export class OrdenNuevaComponent implements OnInit {
     });
   });
 
+  // RN-33: servicios y repuestos elegidos como motivo de ingreso
+  readonly busquedaItem = signal('');
+  readonly sugServicios = signal<Servicio[]>([]);
+  readonly sugRepuestos = signal<Repuesto[]>([]);
+  /** libre: no está en el catálogo (trabajo → mano de obra; repuesto → repuesto externo del taller). */
+  readonly items = signal<
+    { tipo: 'SERVICIO' | 'REPUESTO'; id: string; nombre: string; precio: number; cantidad: number; libre?: boolean }[]
+  >([]);
+  readonly totalItems = computed(() => this.items().reduce((s, it) => s + it.precio * it.cantidad, 0));
+  private servicios: Servicio[] = [];
+
   readonly clienteId = this.fb.nonNullable.control('');
 
   readonly nuevo = this.fb.nonNullable.group({
@@ -310,11 +469,62 @@ export class OrdenNuevaComponent implements OnInit {
 
   async ngOnInit() {
     this.datos.agendaEntregas().then((a) => this.agenda.set(a)).catch(() => {});
+    this.datos.servicios().then((s) => (this.servicios = s.filter((x) => x.activo !== false))).catch(() => {});
     // ?placa=XXX preselecciona el vehículo (enlace desde la ficha del vehículo).
     const lista = await this.datos.buscarVehiculos(this.placa() ?? '');
     this.vehiculos.set(lista);
     const v = this.placa() ? lista.find((x) => x.placa === this.placa()) : undefined;
     if (v) this.elegirVehiculo(v);
+  }
+
+  async buscarItem(q: string) {
+    this.busquedaItem.set(q);
+    const t = q.trim().toLowerCase();
+    if (t.length < 2) return;
+    this.sugServicios.set(this.servicios.filter((s) => s.nombre.toLowerCase().includes(t)).slice(0, 6));
+    try {
+      this.sugRepuestos.set((await this.datos.buscarRepuestos(q.trim())).slice(0, 6));
+    } catch {
+      this.sugRepuestos.set([]);
+    }
+  }
+
+  agregarItem(tipo: 'SERVICIO' | 'REPUESTO', id: string, nombre: string, precio: number) {
+    const ya = this.items().find((it) => it.id === id);
+    if (ya) this.cambiarCantidad(id, ya.cantidad + 1);
+    else this.items.update((l) => [...l, { tipo, id, nombre, precio, cantidad: 1 }]);
+    this.busquedaItem.set('');
+    this.actualizarCosto();
+  }
+
+  agregarLibre(tipo: 'SERVICIO' | 'REPUESTO') {
+    const nombre = this.busquedaItem().trim();
+    if (nombre.length < 3) return this.error.set('Escriba el nombre del ítem (mínimo 3 letras)');
+    this.items.update((l) => [...l, { tipo, id: crypto.randomUUID(), nombre, precio: 0, cantidad: 1, libre: true }]);
+    this.busquedaItem.set('');
+    this.actualizarCosto();
+  }
+
+  cambiarPrecio(id: string, precio: number) {
+    if (!(precio >= 0)) return;
+    this.items.update((l) => l.map((it) => (it.id === id ? { ...it, precio } : it)));
+    this.actualizarCosto();
+  }
+
+  cambiarCantidad(id: string, cantidad: number) {
+    if (!(cantidad > 0)) return;
+    this.items.update((l) => l.map((it) => (it.id === id ? { ...it, cantidad } : it)));
+    this.actualizarCosto();
+  }
+
+  quitarItem(id: string) {
+    this.items.update((l) => l.filter((it) => it.id !== id));
+    this.actualizarCosto();
+  }
+
+  /** El costo estimado se llena con la suma de lo elegido (se puede corregir a mano). */
+  private actualizarCosto() {
+    this.form.controls.costoEstimado.setValue(this.items().length ? Math.round(this.totalItems() * 100) / 100 : null);
   }
 
   elegirDia(d: DiaAgenda) {
@@ -356,7 +566,34 @@ export class OrdenNuevaComponent implements OnInit {
 
   async cambiarANuevo() {
     this.modo.set('nuevo');
+    this.errorNuevo.set(null);
+    this.modalNuevo.set(true);
     this.clientes.set(await this.datos.buscarClientes(''));
+  }
+
+  /** Valida el vehículo y el dueño antes de cerrar la ventana. */
+  confirmarNuevo() {
+    this.nuevo.markAllAsTouched();
+    if (this.nuevo.invalid) return this.errorNuevo.set('Complete placa, marca y modelo');
+    if (this.clienteNuevo()) {
+      this.cliente.markAllAsTouched();
+      if (this.cliente.invalid) return this.errorNuevo.set('Complete nombre y teléfono del cliente');
+    } else if (!this.clienteId.value) {
+      return this.errorNuevo.set('Seleccione el propietario');
+    }
+    this.errorNuevo.set(null);
+    this.nuevoConfirmado = true;
+    this.modalNuevo.set(false);
+  }
+
+  /** Cerrar sin confirmar la primera vez vuelve a "Ya registrado". */
+  cerrarNuevo() {
+    this.modalNuevo.set(false);
+    if (!this.nuevoConfirmado) this.modo.set('existente');
+  }
+
+  nombreClienteElegido() {
+    return this.clientes().find((c) => c.id === this.clienteId.value)?.nombre ?? '';
   }
 
   async guardar() {
@@ -391,7 +628,29 @@ export class OrdenNuevaComponent implements OnInit {
         observacionesRecepcion: f.observacionesRecepcion,
         fechaEntregaEstimada: this.entrega(),
         costoEstimado: f.costoEstimado != null && String(f.costoEstimado) !== '' ? Number(f.costoEstimado) : null,
+        repuestosSugeridos: this.items()
+          .filter((it) => it.tipo === 'REPUESTO' && !it.libre)
+          .map((it) => ({ repuestoId: it.id, nombre: it.nombre, cantidad: it.cantidad })),
       });
+      // RN-33: los trabajos quedan como mano de obra y los repuestos nuevos como repuestos externos del taller.
+      let actual = orden;
+      for (const it of this.items().filter((x) => x.tipo === 'SERVICIO' || x.libre)) {
+        if (it.tipo === 'SERVICIO') {
+          await this.datos.agregarManoObra(actual, {
+            servicioId: it.libre ? null : it.id,
+            descripcion: it.cantidad > 1 ? `${it.nombre} (x${it.cantidad})` : it.nombre,
+            monto: it.precio * it.cantidad,
+          });
+        } else {
+          await this.datos.agregarRepuestoExterno(actual, {
+            descripcion: it.nombre,
+            cantidad: it.cantidad,
+            origen: 'TALLER',
+            precioUnitario: it.precio,
+          });
+        }
+        actual = await this.datos.obtenerOrden(orden.id);
+      }
       this.router.navigate(['/ordenes', orden.id]);
     } catch (err) {
       this.error.set(mensajeError(err));

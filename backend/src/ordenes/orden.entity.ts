@@ -105,6 +105,10 @@ export class OrdenTrabajo extends BaseEntity {
   @Column({ name: 'presupuesto_aprobado', type: 'numeric', precision: 10, scale: 2, nullable: true, transformer: numeric })
   presupuestoAprobado: number | null;
 
+  /** RN-33: repuestos elegidos en la recepción; se cargan con un toque en el diagnóstico. */
+  @Column({ name: 'repuestos_sugeridos', type: 'jsonb', nullable: true })
+  repuestosSugeridos: { repuestoId: string; nombre: string; cantidad: number }[] | null;
+
   /** RN-16: descuento en Bs, solo lo aplica el administrador. */
   @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, transformer: numeric })
   descuento: number;

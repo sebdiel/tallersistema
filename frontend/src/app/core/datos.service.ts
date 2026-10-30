@@ -21,6 +21,7 @@ import {
   Pago,
   Repuesto,
   RepuestoExterno,
+  RepuestoSugerido,
   Servicio,
   Taller,
   Vehiculo,
@@ -42,6 +43,7 @@ export interface NuevaOrden {
   mecanicoId?: string | null;
   fechaEntregaEstimada?: string | null;
   costoEstimado?: number | null;
+  repuestosSugeridos?: RepuestoSugerido[];
 }
 
 const uuid = () => crypto.randomUUID();
@@ -199,7 +201,7 @@ export class DatosService {
     let vehiculo: Vehiculo | undefined;
 
     if (d.problemaReportado.trim().length < 5) {
-      throw new Error('Describa el problema reportado (mínimo 5 caracteres)');
+      throw new Error('Indique el motivo de ingreso (mínimo 5 caracteres)');
     }
 
     if (d.nuevoCliente) {
@@ -299,6 +301,7 @@ export class DatosService {
       fechaEntrega: null,
       fechaEntregaEstimada: d.fechaEntregaEstimada ?? null,
       costoEstimado: d.costoEstimado ?? null,
+      repuestosSugeridos: d.repuestosSugeridos?.length ? d.repuestosSugeridos : null,
       vehiculo: { ...vehiculo, kilometraje: d.kilometrajeIngreso },
       cliente,
       mecanico,
@@ -319,6 +322,7 @@ export class DatosService {
         fechaIngreso: fecha,
         fechaEntregaEstimada: orden.fechaEntregaEstimada,
         costoEstimado: orden.costoEstimado,
+        repuestosSugeridos: orden.repuestosSugeridos ?? undefined,
       },
       descripcion: `Recibir ${vehiculo.placa}`,
     });

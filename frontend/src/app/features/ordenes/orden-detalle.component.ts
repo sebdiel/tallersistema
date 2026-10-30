@@ -25,6 +25,7 @@ import {
   Persona,
   Repuesto,
   RepuestoExterno,
+  RepuestoSugerido,
   Servicio,
   formatoNumero,
 } from '../../core/models';
@@ -46,6 +47,8 @@ import {
     .fecha-entrega { width: auto; min-height: 34px; padding: 2px 8px; }
     .atrasada { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
       background: #ef444422; color: #ef4444; font-size: 0.75rem; font-weight: 700; }
+    .sugeridos { margin-top: 12px; padding: 10px 12px; border: 1px dashed #f5b301; border-radius: 10px; background: #f5b3010d; }
+    .sugerido { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
     .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
     .cambio { color: #f5b301; }
     .diferencia { color: #16a34a; }
@@ -327,6 +330,17 @@ export class OrdenDetalleComponent implements OnInit {
 
   cambiarEntrega(fecha: string) {
     this.ejecutar(() => this.datos.actualizarOrden(this.orden()!, { fechaEntregaEstimada: fecha || null }));
+  }
+
+  /** RN-33: repuestos elegidos al recibir que todavía no se cargaron. */
+  readonly sugeridosPendientes = computed(() => {
+    const o = this.orden();
+    const cargados = new Set((o?.repuestos ?? []).map((l) => l.repuestoId));
+    return (o?.repuestosSugeridos ?? []).filter((s) => !cargados.has(s.repuestoId));
+  });
+
+  agregarSugerido(s: RepuestoSugerido) {
+    this.ejecutar(() => this.datos.agregarRepuesto(this.orden()!, s.repuestoId, s.cantidad));
   }
 
   aplicarDescuento() {

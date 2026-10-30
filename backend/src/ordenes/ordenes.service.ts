@@ -194,6 +194,7 @@ export class OrdenesService {
         fechaIngreso,
         fechaEntregaEstimada: validarEntregaEstimada(dto.fechaEntregaEstimada, fechaIngreso),
         costoEstimado: dto.costoEstimado ?? null,
+        repuestosSugeridos: dto.repuestosSugeridos?.length ? dto.repuestosSugeridos : null,
       });
       await m.insert(OrdenTrabajo, orden);
       await m.insert(HistorialEstado, {

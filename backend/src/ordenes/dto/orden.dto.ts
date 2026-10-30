@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsDate,
   Matches,
@@ -13,6 +14,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { EstadoOrden } from '../maquina-estados';
 import { MetodoPago } from '../pago.entity';
@@ -20,6 +22,21 @@ import { OrigenRepuestoExterno } from '../orden-repuesto-externo.entity';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || null : value;
+
+/** RN-33: repuesto elegido como motivo de ingreso. */
+export class RepuestoSugeridoDto {
+  @IsUUID('4', { message: 'Repuesto inválido' })
+  repuestoId: string;
+
+  @IsString()
+  @MaxLength(200)
+  nombre: string;
+
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
+  cantidad: number;
+}
 
 export class CreateOrdenDto {
   /** Opcional: lo envía el frontend cuando la OT se creó sin conexión. */
@@ -31,8 +48,8 @@ export class CreateOrdenDto {
   vehiculoId: string;
 
   @Transform(trim)
-  @IsString({ message: 'Describa el problema reportado por el cliente' })
-  @MinLength(5, { message: 'Describa el problema reportado (mínimo 5 caracteres)' })
+  @IsString({ message: 'Indique el motivo de ingreso' })
+  @MinLength(5, { message: 'Indique el motivo de ingreso (mínimo 5 caracteres)' })
   problemaReportado: string;
 
   @Type(() => Number)
@@ -59,6 +76,13 @@ export class CreateOrdenDto {
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Fecha de entrega estimada inválida' })
   fechaEntregaEstimada?: string | null;
+
+  /** RN-33: repuestos elegidos como motivo de ingreso. */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RepuestoSugeridoDto)
+  repuestosSugeridos?: RepuestoSugeridoDto[];
 
   /** RN-27: costo aproximado informado al cliente en la recepción (Bs). */
   @IsOptional()

@@ -103,7 +103,7 @@
           <dd>{{ o.fechaIngreso | date: 'dd/MM/yyyy HH:mm' }}</dd>
           <dt>Kilometraje</dt>
           <dd>{{ o.kilometrajeIngreso | number }} km</dd>
-          <dt>Problema</dt>
+          <dt>Motivo de ingreso</dt>
           <dd>{{ o.problemaReportado }}</dd>
           <dt>Entrega</dt>
           <dd>
@@ -207,6 +207,18 @@
         </table>
       } @else {
         <p class="item-sub">No hay repuestos registrados.</p>
+      }
+
+      @if (conRepuestos() && sugeridosPendientes().length) {
+        <div class="sugeridos">
+          <strong>Elegidos en la recepción</strong>
+          @for (s of sugeridosPendientes(); track s.repuestoId) {
+            <div class="sugerido">
+              <span>{{ s.nombre }} × {{ s.cantidad }}</span>
+              <button class="btn" style="min-height: 32px" [disabled]="procesando()" (click)="agregarSugerido(s)">Agregar</button>
+            </div>
+          }
+        </div>
       }
 
       @if (conRepuestos()) {
