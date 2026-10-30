@@ -30,6 +30,8 @@ const ICONOS: Record<string, string> = {
   ok: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
   campana: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
   mas:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  editar: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  quitar: '<path d="M18 6 6 18M6 6l12 12"/>',
 };
 
 @Component({

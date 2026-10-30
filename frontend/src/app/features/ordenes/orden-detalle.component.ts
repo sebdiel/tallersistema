@@ -36,6 +36,13 @@ import {
   imports: [IconoComponent, RouterLink, FormsModule, DatePipe, DecimalPipe],
   templateUrl: './orden-detalle.component.html',
   styles: `
+    .btn-icono { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+      margin-left: 4px; border-radius: 8px; border: 1px solid var(--borde); background: transparent;
+      color: var(--texto-suave); font-size: 1.05rem; cursor: pointer; transition: all 0.15s; }
+    .btn-icono:hover:not(:disabled) { color: #f5b301; border-color: #f5b301; background: #f5b30114; }
+    .btn-icono.peligro:hover:not(:disabled) { color: #ef4444; border-color: #ef4444; background: #ef444414; }
+    .btn-icono:disabled { opacity: 0.4; cursor: default; }
+    td.num:has(.btn-icono) { white-space: nowrap; }
     .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
     .cambio { color: #f5b301; }
     .diferencia { color: #16a34a; }

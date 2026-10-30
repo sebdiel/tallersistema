@@ -173,7 +173,7 @@
                 <td class="num">{{ l.cantidad * l.precioUnitario | number: '1.2-2' }}</td>
                 @if (conRepuestos()) {
                   <td class="num">
-                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitar(l)">✕</button>
+                    <button class="btn-icono peligro" [disabled]="procesando()" (click)="quitar(l)" title="Quitar" aria-label="Quitar"><app-icono nombre="quitar" /></button>
                   </td>
                 }
               </tr>
@@ -268,7 +268,7 @@
                     }
                   </div>
                   @if (l.motivoCambio) {
-                    <div class="item-sub cambio">✏️ {{ l.motivoCambio }}</div>
+                    <div class="item-sub cambio"><app-icono nombre="editar" /> {{ l.motivoCambio }}</div>
                   }
                 </td>
                 <td class="num">{{ l.cantidad }}</td>
@@ -276,8 +276,8 @@
                 <td class="num">{{ l.cantidad * l.precioUnitario | number: '1.2-2' }}</td>
                 @if (costosEditables()) {
                   <td class="num">
-                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="editarExterno(l)" title="Cambiar precio o cantidad">✏️</button>
-                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitarExterno(l)">✕</button>
+                    <button class="btn-icono" [disabled]="procesando()" (click)="editarExterno(l)" title="Cambiar precio o cantidad" aria-label="Editar"><app-icono nombre="editar" /></button>
+                    <button class="btn-icono peligro" [disabled]="procesando()" (click)="quitarExterno(l)" title="Quitar" aria-label="Quitar"><app-icono nombre="quitar" /></button>
                   </td>
                 }
               </tr>
@@ -376,14 +376,14 @@
                     <div class="item-sub"><app-icono nombre="personal" /> {{ l.mecanico.nombre }}</div>
                   }
                   @if (l.motivoCambio) {
-                    <div class="item-sub cambio">✏️ {{ l.motivoCambio }}</div>
+                    <div class="item-sub cambio"><app-icono nombre="editar" /> {{ l.motivoCambio }}</div>
                   }
                 </td>
                 <td class="num">{{ l.monto | number: '1.2-2' }}</td>
                 @if (costosEditables()) {
                   <td class="num">
-                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="editarMano(l)" title="Cambiar descripción o monto">✏️</button>
-                    <button class="btn btn-sec" style="min-height: 32px; padding: 0 10px" [disabled]="procesando()" (click)="quitarManoObra(l)">✕</button>
+                    <button class="btn-icono" [disabled]="procesando()" (click)="editarMano(l)" title="Cambiar descripción o monto" aria-label="Editar"><app-icono nombre="editar" /></button>
+                    <button class="btn-icono peligro" [disabled]="procesando()" (click)="quitarManoObra(l)" title="Quitar" aria-label="Quitar"><app-icono nombre="quitar" /></button>
                   </td>
                 }
               </tr>
