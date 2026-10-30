@@ -217,6 +217,9 @@ export interface OrdenTrabajo {
   costoEstimado?: number | null;
   /** RN-29: total que aceptó el cliente al iniciar la reparación (Bs). */
   presupuestoAprobado?: number | null;
+  /** RN-32: cuándo y cómo aprobó el cliente. */
+  aprobadoEn?: string | null;
+  medioAprobacion?: MedioAprobacion | null;
   vehiculo?: Vehiculo;
   cliente?: Cliente;
   mecanico?: Persona | null;
@@ -287,6 +290,14 @@ export interface RepuestoExterno {
   precioUnitario: number;
   motivoCambio?: string | null;
 }
+
+export type MedioAprobacion = 'PERSONA' | 'LLAMADA' | 'WHATSAPP';
+
+export const MEDIOS_APROBACION: { valor: MedioAprobacion; texto: string }[] = [
+  { valor: 'PERSONA', texto: 'En persona' },
+  { valor: 'LLAMADA', texto: 'Por llamada' },
+  { valor: 'WHATSAPP', texto: 'Por WhatsApp' },
+];
 
 export type MetodoPago = 'EFECTIVO' | 'QR' | 'TRANSFERENCIA' | 'TARJETA';
 

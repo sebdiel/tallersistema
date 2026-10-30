@@ -16,7 +16,9 @@ import {
 } from '../../core/estados';
 import {
   EstadoOrden,
+  MEDIOS_APROBACION,
   METODOS_PAGO,
+  MedioAprobacion,
   ManoObra,
   MetodoPago,
   OrdenRepuesto,
@@ -120,6 +122,8 @@ export class OrdenDetalleComponent implements OnInit {
   /** Transición que requiere comentario (cancelar / reabrir) a la espera de confirmar. */
   readonly confirmando = signal<EstadoOrden | null>(null);
   comentario = '';
+  readonly medios = MEDIOS_APROBACION;
+  medio: MedioAprobacion | '' = '';
   diagnostico = '';
   repuestoId = '';
   cantidad = 1;
@@ -184,6 +188,10 @@ export class OrdenDetalleComponent implements OnInit {
 
   // ---------------------------------------------------------------- acciones
 
+  textoMedio(m: MedioAprobacion) {
+    return this.medios.find((x) => x.valor === m)?.texto ?? m;
+  }
+
   /** Pasos hacia atrás (reabrir reparación, volver a diagnóstico): piden motivo. */
   esRetroceso(destino: EstadoOrden) {
     const e = this.orden()?.estado;
@@ -195,14 +203,17 @@ export class OrdenDetalleComponent implements OnInit {
     const requiereMotivo =
       destino === 'CANCELADO' ||
       this.esRetroceso(destino) ||
+      // RN-32: iniciar la reparación registra cómo aprobó el cliente.
+      (o.estado === 'EN_DIAGNOSTICO' && destino === 'EN_REPARACION') ||
       // RN-18: entregar a crédito (solo admin) exige comentario.
       (destino === 'ENTREGADO' && (this.totales()?.saldo ?? 0) > 0 && this.auth.tieneRol('ADMIN'));
     if (requiereMotivo && this.confirmando() !== destino) {
       this.confirmando.set(destino);
       this.comentario = '';
+      this.medio = '';
       return;
     }
-    this.ejecutar(() => this.datos.cambiarEstado(o, destino, this.comentario || null)).then(() =>
+    this.ejecutar(() => this.datos.cambiarEstado(o, destino, this.comentario || null, this.medio || null)).then(() =>
       this.confirmando.set(null),
     );
   }

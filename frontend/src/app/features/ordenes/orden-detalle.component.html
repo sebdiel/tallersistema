@@ -59,6 +59,22 @@
         </div>
 
         @if (confirmando(); as destino) {
+          @if (o.estado === 'EN_DIAGNOSTICO' && destino === 'EN_REPARACION') {
+          <div class="campo" style="margin-top: 12px">
+            <label class="req">¿Cómo aprobó el cliente el presupuesto de Bs {{ totales()?.total | number: '1.2-2' }}?</label>
+            <div class="filtros" style="margin-top: 0">
+              @for (m of medios; track m.valor) {
+                <button type="button" [class.activo]="medio === m.valor" (click)="medio = m.valor">{{ m.texto }}</button>
+              }
+            </div>
+            <label for="nota">Nota (opcional)</label>
+            <textarea id="nota" rows="2" [(ngModel)]="comentario" placeholder="Ej.: pidió que el espejo sea original"></textarea>
+          </div>
+          <div class="acciones">
+            <button class="btn btn-sec" (click)="confirmando.set(null)">Volver</button>
+            <button class="btn" [disabled]="procesando() || !medio" (click)="cambiarEstado(destino)">Cliente aprobó: iniciar reparación</button>
+          </div>
+          } @else {
           <div class="campo" style="margin-top: 12px">
             <label class="req" for="motivo">
               @switch (destino) {
@@ -79,6 +95,7 @@
               Confirmar
             </button>
           </div>
+          }
         }
       </section>
     }
@@ -501,6 +518,12 @@
           </dd>
           <dt><strong>Total</strong></dt>
           <dd class="num"><strong>Bs {{ t.total | number: '1.2-2' }}</strong></dd>
+          @if (o.aprobadoEn && o.medioAprobacion) {
+            <dt>Aprobado por el cliente</dt>
+            <dd class="num">
+              {{ o.aprobadoEn | date: 'dd/MM/yyyy HH:mm' }} · {{ textoMedio(o.medioAprobacion) }}
+            </dd>
+          }
           @if (o.presupuestoAprobado != null && t.total !== o.presupuestoAprobado) {
             <dt>Presupuesto aprobado</dt>
             <dd class="num">Bs {{ o.presupuestoAprobado | number: '1.2-2' }}</dd>

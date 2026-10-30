@@ -113,13 +113,19 @@ describe('OrdenesService — reglas de costos', () => {
     ).rejects.toThrow('Indique cuánto se cobra por el repuesto');
   });
 
-  it('RN-29: guarda el presupuesto aprobado al pasar de diagnóstico a reparación', async () => {
+  it('RN-29 / RN-32: exige y guarda la aprobación del cliente al pasar a reparación', async () => {
     const { service, tabla } = preparar(EstadoOrden.EN_DIAGNOSTICO);
     tabla(OrdenRepuestoExterno).push({ id: 'x-1', ordenId: 'o-1', cantidad: 1, precioUnitario: 100 });
     tabla(OrdenManoObra).push({ id: 'mo-1', ordenId: 'o-1', monto: 30 });
-    await service.cambiarEstado(admin, 'o-1', { estado: EstadoOrden.EN_REPARACION });
-    expect(tabla(OrdenTrabajo)[0].presupuestoAprobado).toBe(130);
-    expect(tabla(HistorialEstado)).toHaveLength(1);
+    await expect(
+      service.cambiarEstado(admin, 'o-1', { estado: EstadoOrden.EN_REPARACION }),
+    ).rejects.toThrow('Indique cómo aprobó el cliente el presupuesto');
+    await service.cambiarEstado(admin, 'o-1', {
+      estado: EstadoOrden.EN_REPARACION,
+      medioAprobacion: 'WHATSAPP',
+    });
+    expect(tabla(OrdenTrabajo)[0]).toMatchObject({ presupuestoAprobado: 130, medioAprobacion: 'WHATSAPP' });
+    expect(tabla(HistorialEstado)[0].comentario).toBe('Cliente aprobó el presupuesto de Bs 130.00 por WhatsApp');
   });
 
   it('RN-29: editar un precio cambia el total y guarda el motivo', async () => {

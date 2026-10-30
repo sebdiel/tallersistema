@@ -15,6 +15,8 @@ import {
   Cliente,
   EstadoOrden,
   ManoObra,
+  MEDIOS_APROBACION,
+  MedioAprobacion,
   MetodoPago,
   OrdenRepuesto,
   OrdenTrabajo,
@@ -331,7 +333,12 @@ export class DatosService {
   }
 
   /** HU-10: cambio de estado según la máquina de estados. */
-  async cambiarEstado(o: OrdenTrabajo, destino: EstadoOrden, comentario?: string | null) {
+  async cambiarEstado(
+    o: OrdenTrabajo,
+    destino: EstadoOrden,
+    comentario?: string | null,
+    medioAprobacion?: MedioAprobacion | null,
+  ) {
     const orden = structuredClone(o);
     const usuario = this.auth.usuario()!;
 
@@ -355,6 +362,16 @@ export class DatosService {
     if (error) throw new Error(error);
 
     const fecha = ahora();
+    // RN-29 / RN-32: lo que aceptó el cliente, cuándo y cómo.
+    const aprueba = o.estado === 'EN_DIAGNOSTICO' && destino === 'EN_REPARACION';
+    if (aprueba) {
+      if (!medioAprobacion) throw new Error('Indique cómo aprobó el cliente el presupuesto');
+      orden.presupuestoAprobado = t.total;
+      orden.aprobadoEn = fecha;
+      orden.medioAprobacion = medioAprobacion;
+      const medio = MEDIOS_APROBACION.find((m) => m.valor === medioAprobacion)!.texto.toLowerCase();
+      comentario = `Cliente aprobó el presupuesto de Bs ${t.total.toFixed(2)} ${medio}` + (comentario ? `. ${comentario}` : '');
+    }
     const devueltos = destino === 'CANCELADO' ? (orden.repuestos ?? []) : [];
     orden.historial = [
       ...(orden.historial ?? []),
@@ -363,8 +380,6 @@ export class DatosService {
     orden.estado = destino;
     if (destino === 'TERMINADO') orden.fechaTerminado = fecha;
     if (destino === 'EN_REPARACION') orden.fechaTerminado = null;
-    // RN-29: se guarda el total que aceptó el cliente.
-    if (o.estado === 'EN_DIAGNOSTICO' && destino === 'EN_REPARACION') orden.presupuestoAprobado = t.total;
     if (destino === 'ENTREGADO') orden.fechaEntrega = fecha;
     if (destino === 'CANCELADO') orden.repuestos = [];
     orden._pendiente = true;
@@ -375,7 +390,9 @@ export class DatosService {
           id: uuid(),
           tipo: 'orden.estado',
           ref: orden.id,
-          datos: { estado: destino, comentario: comentario ?? null, fecha },
+          datos: aprueba
+            ? { estado: destino, comentario: null, fecha, medioAprobacion }
+            : { estado: destino, comentario: comentario ?? null, fecha },
           descripcion: `${formatoNumero(orden.numero)} → ${destino}`,
         },
       ],

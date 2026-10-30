@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDate,
+  IsIn,
   Matches,
   IsEnum,
   IsInt,
@@ -110,6 +111,11 @@ export class CambiarEstadoDto {
   @IsString()
   @MaxLength(300)
   comentario?: string | null;
+
+  /** RN-32: al iniciar la reparación, cómo aprobó el cliente el presupuesto. */
+  @IsOptional()
+  @IsIn(['PERSONA', 'LLAMADA', 'WHATSAPP'], { message: 'Medio de aprobación inválido' })
+  medioAprobacion?: 'PERSONA' | 'LLAMADA' | 'WHATSAPP';
 
   /** Momento del cambio en el dispositivo (modo offline). */
   @IsOptional()
