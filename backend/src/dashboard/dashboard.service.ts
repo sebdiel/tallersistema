@@ -254,7 +254,10 @@ export class DashboardService {
            FROM orden_mano_obra m JOIN entregadas e ON e.id = m.orden_id
           GROUP BY m.orden_id
        ), ext AS (
-         SELECT x.orden_id, SUM(x.cantidad * x.precio_unitario) AS venta
+         -- RN-28: si no se anotó lo que pagó el taller, no se inventa ganancia (margen 0).
+         SELECT x.orden_id,
+                SUM(x.cantidad * x.precio_unitario) AS venta,
+                SUM(x.cantidad * (x.precio_unitario - COALESCE(x.costo_unitario, x.precio_unitario))) AS margen
            FROM orden_repuestos_externos x JOIN entregadas e ON e.id = x.orden_id
           GROUP BY x.orden_id
        )
@@ -265,8 +268,8 @@ export class DashboardService {
             LEFT JOIN rep ON rep.orden_id = e.id
             LEFT JOIN mo ON mo.orden_id = e.id
             LEFT JOIN ext ON ext.orden_id = e.id) AS facturado,
-         (SELECT COALESCE(SUM(venta), 0) FROM rep) AS repuestos,
-         (SELECT COALESCE(SUM(margen), 0) FROM rep) AS margen_repuestos,
+         (SELECT COALESCE(SUM(venta), 0) FROM rep) + (SELECT COALESCE(SUM(venta), 0) FROM ext) AS repuestos,
+         (SELECT COALESCE(SUM(margen), 0) FROM rep) + (SELECT COALESCE(SUM(margen), 0) FROM ext) AS margen_repuestos,
          (SELECT COALESCE(SUM(monto), 0) FROM mo) AS mano_obra,
          (SELECT AVG(EXTRACT(EPOCH FROM fecha_entrega - fecha_ingreso)) / 3600 FROM entregadas) AS horas_en_taller,
          (SELECT COUNT(*) FROM ordenes_trabajo
