@@ -235,7 +235,7 @@
             </p>
           }
 
-          @if (!o.repuestos?.length) {
+          @if (!o.repuestos?.length && !o.externos?.length) {
             <label style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
               <input type="checkbox" [checked]="o.sinRepuestos" [disabled]="procesando()" (change)="marcarSinRepuestos($any($event.target).checked)" />
               {{ o.estado === 'EN_DIAGNOSTICO' ? 'Este trabajo no necesita repuestos' : 'Este trabajo no usó repuestos' }} (solo mano de obra)

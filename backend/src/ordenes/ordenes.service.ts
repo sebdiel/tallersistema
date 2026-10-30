@@ -274,7 +274,9 @@ export class OrdenesService {
       const error = validarTransicion(
         {
           ...orden,
-          totalRepuestos: lineas.length,
+          // RN-11: los repuestos externos también cuentan como repuestos registrados.
+          totalRepuestos:
+            lineas.length + (await m.count(OrdenRepuestoExterno, { where: { ordenId: id } })),
           saldo: totales.saldo,
           pagado: totales.pagado,
           esAdmin: user.rol === Rol.ADMIN,

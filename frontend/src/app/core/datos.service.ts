@@ -343,7 +343,7 @@ export class DatosService {
     const error = validarTransicion(
       {
         ...orden,
-        totalRepuestos: orden.repuestos?.length ?? 0,
+        totalRepuestos: (orden.repuestos?.length ?? 0) + (orden.externos?.length ?? 0),
         saldo: t.saldo,
         pagado: t.pagado,
         esAdmin: usuario.rol === 'ADMIN',
