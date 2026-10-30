@@ -49,6 +49,10 @@ import {
       background: #ef444422; color: #ef4444; font-size: 0.75rem; font-weight: 700; }
     .sugeridos { margin-top: 12px; padding: 10px 12px; border: 1px dashed #f5b301; border-radius: 10px; background: #f5b3010d; }
     .sugerido { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+    .rep-libre { margin-top: 10px; padding: 10px 12px; border: 1px dashed #f5b301; border-radius: 10px; background: #f5b3010d; }
+    .rep-libre-fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 8px; }
+    .rep-libre-fila label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--texto-suave); }
+    .rep-libre-fila input { width: 130px; }
     .editor { margin-top: 12px; padding: 12px; border: 1px dashed #f5b301; border-radius: 10px; }
     .cambio { color: #f5b301; }
     .diferencia { color: #16a34a; }
@@ -127,6 +131,7 @@ export class OrdenDetalleComponent implements OnInit {
   repuestoId = '';
   cantidad = 1;
   filtroRepuesto = '';
+  libre = { precio: null as number | null, cantidad: 1 };
   // Iteración 3
   mo = { servicioId: '', descripcion: '', monto: null as number | null };
   ext = { descripcion: '', cantidad: 1, origen: 'CLIENTE' as 'CLIENTE' | 'TALLER', costo: null as number | null, precio: null as number | null };
@@ -236,6 +241,23 @@ export class OrdenDetalleComponent implements OnInit {
   quitar(linea: OrdenRepuesto) {
     if (!confirm(`¿Quitar ${linea.repuesto?.nombre}? Volverá al inventario.`)) return;
     this.ejecutar(() => this.datos.quitarRepuesto(this.orden()!, linea));
+  }
+
+  /** RN-28: repuesto que no está en el inventario; queda como repuesto externo del taller. */
+  async agregarRepuestoLibre() {
+    await this.ejecutar(() =>
+      this.datos.agregarRepuestoExterno(this.orden()!, {
+        descripcion: this.filtroRepuesto.trim(),
+        cantidad: Number(this.libre.cantidad) || 1,
+        origen: 'TALLER',
+        precioUnitario: Number(this.libre.precio),
+      }),
+    );
+    if (!this.error()) {
+      this.filtroRepuesto = '';
+      this.libre = { precio: null, cantidad: 1 };
+      this.filtrarRepuestos();
+    }
   }
 
   async filtrarRepuestos() {

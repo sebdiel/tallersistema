@@ -254,6 +254,25 @@
             </p>
           }
 
+          <!-- RN-28: repuesto que no está en el inventario, con precio puesto a mano -->
+          @if (filtroRepuesto.trim().length >= 2) {
+            <div class="rep-libre">
+              <span class="item-sub">
+                @if (!repuestos().length) { No está en el inventario. }
+                ¿Agregar <strong>«{{ filtroRepuesto.trim() }}»</strong> con su precio?
+              </span>
+              <div class="rep-libre-fila">
+                <label>Precio (Bs c/u)
+                  <input type="number" min="0" step="0.5" inputmode="decimal" [(ngModel)]="libre.precio" />
+                </label>
+                <label>Cantidad
+                  <input type="number" min="1" step="1" inputmode="decimal" [(ngModel)]="libre.cantidad" />
+                </label>
+                <button class="btn" [disabled]="procesando() || libre.precio == null" (click)="agregarRepuestoLibre()">Agregar como ítem</button>
+              </div>
+            </div>
+          }
+
           @if (!o.repuestos?.length && !o.externos?.length) {
             <label style="display: flex; gap: 8px; align-items: center; margin-top: 12px">
               <input type="checkbox" [checked]="o.sinRepuestos" [disabled]="procesando()" (change)="marcarSinRepuestos($any($event.target).checked)" />
@@ -292,7 +311,7 @@
                     @if (l.origen === 'CLIENTE') {
                       <span class="origen cliente">Lo trae el cliente</span>
                     } @else {
-                      <span class="origen taller">Comprado por el taller</span>
+                      <span class="origen taller">Del taller (fuera de inventario)</span>
                       @if (l.costoUnitario != null) {
                         <span class="item-sub"> · costó Bs {{ l.costoUnitario | number: '1.2-2' }}</span>
                       }
