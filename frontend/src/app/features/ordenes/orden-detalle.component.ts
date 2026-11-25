@@ -37,6 +37,9 @@ import {
   imports: [IconoComponent, RouterLink, FormsModule, DatePipe, DecimalPipe],
   templateUrl: './orden-detalle.component.html',
   styles: `
+    .aviso-whatsapp { border-left: 4px solid #25a85a; }
+    .boton-whatsapp { background: #16753d; color: #fff; margin-top: 10px; }
+    .boton-whatsapp:hover { background: #105c30; color: #fff; }
     .btn-icono { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
       margin-left: 4px; border-radius: 8px; border: 1px solid var(--borde); background: transparent;
       color: var(--texto-suave); font-size: 1.05rem; cursor: pointer; transition: all 0.15s; }
@@ -135,6 +138,29 @@ export class OrdenDetalleComponent implements OnInit {
   readonly numero = formatoNumero;
 
   readonly orden = signal<OrdenTrabajo | null>(null);
+  readonly enlaceWhatsApp = computed(() => {
+    const o = this.orden();
+    if (!o || o.estado !== 'TERMINADO') return null;
+    const original = o.cliente?.telefono?.trim() ?? '';
+    let telefono = original.replace(/[\s().-]/g, '');
+    if (telefono.startsWith('00')) telefono = '+' + telefono.slice(2);
+    if (/^[67]\d{7}$/.test(telefono)) telefono = '591' + telefono;
+    else if (telefono.startsWith('+')) telefono = telefono.slice(1);
+    if (!/^[1-9]\d{7,14}$/.test(telefono)) return null;
+    const t = calcularTotales(o);
+    const bs = (n: number) => n.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const vehiculo = [o.vehiculo?.marca, o.vehiculo?.modelo].filter(Boolean).join(' ') || 'vehículo';
+    const taller = this.auth.usuario()?.taller?.nombre ?? 'nuestro taller';
+    const mensaje = [
+      `Hola${o.cliente?.nombre ? ', ' + o.cliente.nombre : ''}. Su ${vehiculo}${o.vehiculo?.placa ? ' (placa ' + o.vehiculo.placa + ')' : ''} ya está listo en ${taller}.`,
+      `Orden: ${formatoNumero(o.numero)}.`,
+      `Total: Bs ${bs(t.total)}`,
+      `Pagado: Bs ${bs(t.pagado)}`,
+      `Saldo pendiente: Bs ${bs(Math.max(0, t.saldo))}`,
+      'Puede pasar a recogerlo. ¡Gracias por su confianza!',
+    ].join('\n');
+    return `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+  });
   readonly personal = signal<Persona[]>([]);
   readonly repuestos = signal<Repuesto[]>([]);
   readonly servicios = signal<Servicio[]>([]);

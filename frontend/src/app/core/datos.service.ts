@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
-import { FiltroOrdenes, OrdenesApi, RepuestosApi, VehiculosApi } from './api.service';
+import { ClientesApi, FiltroOrdenes, OrdenesApi, RepuestosApi, VehiculosApi } from './api.service';
 import { AuthService } from './auth.service';
 import { ConexionService, esSinConexion } from './conexion.service';
 import { calcularTotales } from './costos';
@@ -67,6 +67,7 @@ const recalcular = (o: OrdenTrabajo): OrdenTrabajo => ({ ...o, totales: calcular
 @Injectable({ providedIn: 'root' })
 export class DatosService {
   private readonly ordenesApi = inject(OrdenesApi);
+  private readonly clientesApi = inject(ClientesApi);
   private readonly vehiculosApi = inject(VehiculosApi);
   private readonly repuestosApi = inject(RepuestosApi);
   private readonly sync = inject(SyncService);
@@ -118,13 +119,18 @@ export class DatosService {
         const texto = q.trim().toLowerCase();
         const clientes = new Map((await db.clientes.toArray()).map((c) => [c.id, c]));
         return (await db.vehiculos.orderBy('placa').toArray())
-          .filter(
-            (v) =>
+          .filter((v) => {
+            const cliente = v.cliente ?? clientes.get(v.clienteId);
+            return (
               !texto ||
               v.placa.includes(placa) ||
               v.marca.toLowerCase().includes(texto) ||
-              v.modelo.toLowerCase().includes(texto),
-          )
+              v.modelo.toLowerCase().includes(texto) ||
+              cliente?.nombre.toLowerCase().includes(texto) ||
+              cliente?.telefono.includes(q.trim()) ||
+              cliente?.ciNit?.toLowerCase().includes(texto)
+            );
+          })
           .slice(0, 50)
           .map((v) => ({ ...v, cliente: v.cliente ?? clientes.get(v.clienteId) }));
       },
@@ -133,11 +139,35 @@ export class DatosService {
 
   buscarClientes(q = ''): Promise<Cliente[]> {
     const texto = q.trim().toLowerCase();
-    return db.clientes
-      .orderBy('nombre')
-      .filter((c) => c.activo && (!texto || c.nombre.toLowerCase().includes(texto) || c.telefono.includes(texto)))
-      .limit(50)
-      .toArray();
+    const local = () =>
+      db.clientes
+        .orderBy('nombre')
+        .filter(
+          (c) =>
+            c.activo &&
+            (!texto ||
+              c.nombre.toLowerCase().includes(texto) ||
+              c.telefono.includes(q.trim()) ||
+              (c.ciNit?.toLowerCase().includes(texto) ?? false)),
+        )
+        .limit(50)
+        .toArray();
+
+    if (this.conexion.enLinea()) {
+      return firstValueFrom(this.clientesApi.buscar(q))
+        .then(async (remotos) => {
+          await db.clientes.bulkPut(remotos);
+          if (!(await this.sync.hayPendientes())) return remotos;
+          const porId = new Map(remotos.map((c) => [c.id, c]));
+          for (const c of await local()) if (!porId.has(c.id)) porId.set(c.id, c);
+          return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)).slice(0, 50);
+        })
+        .catch(async (err) => {
+          if (!esSinConexion(err)) throw err;
+          return local();
+        });
+    }
+    return local();
   }
 
   buscarRepuestos(q = '', bajoStock = false): Promise<Repuesto[]> {

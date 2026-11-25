@@ -73,7 +73,7 @@ const hoyLocal = () => aIso(new Date());
           } @else {
             <input
               class="buscador"
-              placeholder="Escriba la placa…"
+              placeholder="Busque por placa, cliente, teléfono o vehículo…"
               autocapitalize="characters"
               (input)="buscarVehiculo($any($event.target).value)"
             />
@@ -224,6 +224,14 @@ const hoyLocal = () => aIso(new Date());
           } @else {
             <div class="campo">
               <input class="buscador" placeholder="Filtrar por nombre o teléfono…" (input)="buscarCliente($any($event.target).value)" />
+              @if (busquedaCliente().trim() && clientes().length === 0) {
+                <div class="item-sub" style="margin-top: 8px">
+                  No se encontró un cliente con ese dato.
+                  <button type="button" class="btn btn-sec" style="margin-left: 8px" (click)="agregarClienteDesdeBusqueda()">
+                    + Registrar “{{ busquedaCliente().trim() }}”
+                  </button>
+                </div>
+              }
               <select [formControl]="clienteId" style="margin-top: 6px">
                 <option value="">Seleccione…</option>
                 @for (c of clientes(); track c.id) {
@@ -311,6 +319,7 @@ export class OrdenNuevaComponent implements OnInit {
   readonly vehiculo = signal<Vehiculo | null>(null);
   readonly vehiculos = signal<Vehiculo[]>([]);
   readonly clientes = signal<Cliente[]>([]);
+  readonly busquedaCliente = signal('');
   readonly guardando = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -395,7 +404,17 @@ export class OrdenNuevaComponent implements OnInit {
   }
 
   async buscarCliente(q: string) {
+    this.busquedaCliente.set(q);
     this.clientes.set(await this.datos.buscarClientes(q));
+  }
+
+  agregarClienteDesdeBusqueda() {
+    const nombre = this.busquedaCliente().trim();
+    if (!nombre) return;
+    this.clienteNuevo.set(true);
+    this.cliente.controls.nombre.setValue(nombre);
+    this.clienteId.setValue('');
+    this.errorNuevo.set(null);
   }
 
   elegirVehiculo(v: Vehiculo) {
@@ -404,10 +423,19 @@ export class OrdenNuevaComponent implements OnInit {
   }
 
   async cambiarANuevo() {
+    const propietarioActual = this.vehiculo()?.cliente;
+    this.vehiculo.set(null);
     this.modo.set('nuevo');
     this.errorNuevo.set(null);
     this.modalNuevo.set(true);
-    this.clientes.set(await this.datos.buscarClientes(''));
+    const clientes = await this.datos.buscarClientes('');
+    // Si se parte de un vehículo existente, reutilizar a su propietario para
+    // registrar otro vehículo sin obligar al usuario a buscarlo de nuevo.
+    if (propietarioActual?.activo && !clientes.some((c) => c.id === propietarioActual.id)) {
+      clientes.unshift(propietarioActual);
+    }
+    this.clientes.set(clientes);
+    if (propietarioActual?.activo) this.clienteId.setValue(propietarioActual.id);
   }
 
   /** Valida el vehículo y el dueño antes de cerrar la ventana. */

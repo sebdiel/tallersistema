@@ -22,7 +22,7 @@ export class VehiculosService {
     @InjectRepository(OrdenTrabajo) private readonly ordenes: Repository<OrdenTrabajo>,
   ) {}
 
-  /** HU-07: búsqueda por placa (parcial), marca o modelo. */
+  /** HU-07: búsqueda por placa, marca, modelo o datos del propietario. */
   buscar(user: UsuarioActual, q?: string, limite = 50) {
     const qb = this.repo
       .createQueryBuilder('v')
@@ -32,10 +32,13 @@ export class VehiculosService {
       .take(limite);
 
     if (q?.trim()) {
-      qb.andWhere('(v.placa ILIKE :placa OR v.marca ILIKE :q OR v.modelo ILIKE :q)', {
-        placa: `%${normalizarPlaca(q)}%`,
-        q: `%${q.trim()}%`,
-      });
+      qb.andWhere(
+        '(v.placa ILIKE :placa OR v.marca ILIKE :q OR v.modelo ILIKE :q OR c.nombre ILIKE :q OR c.telefono ILIKE :q OR c.ci_nit ILIKE :q)',
+        {
+          placa: `%${normalizarPlaca(q)}%`,
+          q: `%${q.trim()}%`,
+        },
+      );
     }
     return qb.getMany();
   }

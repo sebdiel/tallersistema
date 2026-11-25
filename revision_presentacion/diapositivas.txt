@@ -1,0 +1,221 @@
+--- PAGINA 1 ---
+SISTEMA WEB PROGRESIVO BASADO EN REGLAS DE
+NEGOCIO AUTOMATIZADAS PARA EL PROCESO DE
+GESTIÓN OPERATIVA DE TALLERES MECÁNICOS DE
+MICROEMPRESAS EN COCHABAMBA
+Autor: Sebastian Fernando Gomez Huanco
+Tutor: Rodrigo Aspeti Vasquez
+Cochabamba · 2026
+
+
+--- PAGINA 2 ---
+Antecedentes
+Registro Manual
+Información en cuadernos, papeles y
+hojas sueltas sin integración
+Presupuestos Empíricos
+Costos calculados "al ojo" según la
+experiencia del mecánico
+Inventario Visual
+Control sin registro de entradas ni
+salidas de repuestos
+Datos Fragmentados
+Sin historial técnico accesible ni
+trazabilidad de vehículos
+Sin Métricas
+Decisiones basadas en intuición por
+falta de datos reales
+
+
+--- PAGINA 3 ---
+PROCESO OPERATIVO ACTUAL
+1.  Recepción del Cliente
+Cliente describe el problema. El
+técnico inspecciona el vehículo y
+anota datos en cuaderno físico o
+hoja suelta.
+2.  Presupuesto Empírico
+El costo se estima mentalmente
+según experiencia del mecánico.
+Sin respaldo documental ni
+historial de precios.
+3.  Ejecución del Servicio
+Control de repuestos visual en
+estantes, sin actualización
+sistemática del stock real
+disponible.
+4.  Registro de Repuestos
+Los repuestos usados se anotan en
+vales independientes, NO
+integrados con la orden de trabajo
+del vehículo.
+5.  Cobro y Pago
+El pago se registra en un cuaderno
+de ingresos separado del registro
+técnico de la reparación.
+6.  Sin Historial Útil
+Información dispersa, búsquedas
+prolongadas. Decisiones por
+intuición — sin métricas ni datos
+estructurados.
+
+--- PAGINA 4 ---
+SITUACIÓN PROBLEMÁTICA
+PLANTEAMIENTO DEL PROBLEMA
+1
+El proceso de registro
+operativo se ejecuta con
+cuadernos físicos y hojas
+de cálculo básicas no
+integradas: pérdida y
+deterioro de información,
+duplicidad de registros,
+tiempos de búsqueda
+altos y dificultad para
+consultar el historial de
+clientes y vehículos.
+2
+El control de repuestos y
+el seguimiento financiero
+operan de forma aislada
+del registro de órdenes de
+trabajo: desactualización
+del stock disponible,
+inconsistencias entre el
+inventario físico y el
+registrado, y
+fragmentación de la
+información financiera y
+operativa.
+3
+Las actividades operativas
+y la elaboración de
+presupuestos dependen
+exclusivamente de la
+memoria y experiencia del
+mecánico: falta de
+estandarización en la
+ejecución técnica,
+variaciones imprecisas en
+costos y tiempos, y riesgo
+de omitir información
+técnica relevante.
+4
+La gestión administrativa
+se basa en la intuición, sin
+consolidación histórica de
+datos: imposibilidad de
+medir métricas clave
+(tiempo promedio de
+reparación, frecuencia de
+servicios), sin análisis
+comparativo ni decisiones
+respaldadas por datos.
+5
+Baja madurez tecnológica,
+con limitaciones reales de
+infraestructura,
+capacitación y recursos
+económicos: barrera de
+adopción frente a
+sistemas genéricos o
+comerciales existentes,
+perpetuando el rezago
+tecnológico del sector.
+
+--- PAGINA 5 ---
+Desarrollar un sistema web progresivo basado en reglas
+de negocio automatizadas para el proceso de gestión
+operativa de talleres mecánicos de microempresas en
+Cochabamba.
+Objetivo General
+
+
+--- PAGINA 6 ---
+OBJETIVOS ESPECÍFICOS
+PARA ALCANZAR EL OBJETIVO GENERAL
+OE1
+Gestión de usuarios y ficha vehicular
+Desarrollar el módulo de gestión de usuarios, registro de clientes y ficha
+técnica vehicular para el control e historial centralizado de las operaciones.
+OE2
+Órdenes de trabajo e inventario offline
+Implementar el módulo transaccional de órdenes de trabajo y control de
+inventario con motor de persistencia local (Local-First / Offline) para
+garantizar el registro de servicios sin conexión a internet.
+OE3
+Costos automatizados y Dashboard
+Desarrollar el módulo de cálculo automatizado de costos y el panel de análisis
+de datos (Dashboard) para la visualización en tiempo real de indicadores
+clave de rendimiento (KPIs).
+OE4
+Administración global (SuperAdmin)
+Construir el módulo de administración global (SuperAdmin) y el despliegue en
+servidor Cloud (VPS) para la gestión de suscripciones y el mantenimiento
+continuo del sistema comercial.
+
+--- PAGINA 7 ---
+SOLUCIÓN PROPUESTA
+PWA
+Progressive Web App
+›  Funciona SIN internet (Service Worker +
+IndexedDB)
+›  Sincronización automática al recuperar conexión
+›  Compatible móvil y escritorio sin instalar app
+nativa
+Motor de Reglas
+de Negocio
+›  SI stock < 3 → alerta automática
+›  SI orden cerrada → actualiza KPIs en tiempo real
+›  SI presupuesto excedido → notifica al
+administrador
+Dashboard
+de KPIs
+›  Tiempo promedio de reparación
+›  Rotación de inventario de repuestos
+›  Rentabilidad por servicio e Índice de retorno
+
+
+--- PAGINA 8 ---
+ARQUITECTURA GENERAL DEL SISTEMA PWA · Laravel · MySQL
+CAPA DE PRESENTACION  —  Frontend PWA (React.js)
+Gestion de Usuarios Clientes / Vehiculos Ordenes de Trabajo Inventario Costos Dashboard KPIs
+REST API
+CAPA DE NEGOCIO  —  Backend Laravel (PHP 8.x)
+Motor de Reglas de Negocio Autenticacion y Roles API Controllers REST Service Worker Sync KPI Engine Auto
+Queries / ORM (Eloquent)
+CAPA DE DATOS  —  MySQL (Base de Datos Relacional Centralizada)
+usuarios clientes vehiculos ordenes_trabajo detalle_orden inventario costos
+OFFLINE
+IndexedDB
+Stack: React.js + Laravel 8.x + MySQL  |  Offline: Service Worker + IndexedDB  |  Versionado: Git + GitHub  |  Entorno: Docker / XAMPP
+
+--- PAGINA 9 ---
+Gestión de Usuarios y Roles
+Perfiles Administrador y Mecánico con seguridad de
+accesos
+Clientes y Vehículos
+Historial técnico completo por propietario y
+automóvil
+Órdenes de Trabajo
+Ciclo completo del servicio: recepción → diagnóstico
+→ entrega
+Gestión de Inventario
+Stock en tiempo real con alertas automáticas de
+reposición
+Registro de Costos
+Consolidación automatizada de repuestos y mano de
+obra
+Dashboard KPIs
+Indicadores de rendimiento: rentabilidad, rotación,
+tiempos
+ALCANCE
+
+--- PAGINA 10 ---
+CONCLUSIÓN
+Una solución tecnológica
+adaptada a la realidad
+local de Cochabamba
+El sistema web progresivo propuesto transforma la gestión empírica de los micro-talleres mecánicos en
+procesos estandarizados, trazables y respaldados por datos — sin barreras económicas ni tecnológicas
+para su adopción.

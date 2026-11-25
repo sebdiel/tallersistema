@@ -24,6 +24,22 @@
       <div class="alerta alerta-warn">{{ aviso() }}</div>
     }
 
+    @if (o.estado === 'TERMINADO') {
+      <section class="card aviso-whatsapp">
+        <h2>Avise al cliente: su vehículo está listo</h2>
+        <p class="item-sub">Abra el chat con el total y el saldo preparados. Revise el mensaje y presione Enviar en WhatsApp.</p>
+        @if (enlaceWhatsApp(); as enlace) {
+          <a class="btn boton-whatsapp" [href]="enlace" target="_blank" rel="noopener noreferrer">
+            <app-icono nombre="mensaje" /> Avisar por WhatsApp
+          </a>
+        } @else {
+          <p class="item-sub">Complete o corrija el teléfono del cliente para avisar por WhatsApp. Para Bolivia, use 8 dígitos o +591 seguido del número.</p>
+          <a class="btn btn-sec" routerLink="/clientes">Ir a Clientes</a>
+        }
+        <p class="item-sub">Después de enviarlo, marque «Ya avisé» en Notificaciones.</p>
+      </section>
+    }
+
     <!-- Pasos de la orden -->
     @if (pasoActual() >= 0) {
       <div class="pasos">

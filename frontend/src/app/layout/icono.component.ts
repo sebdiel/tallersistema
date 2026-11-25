@@ -4,6 +4,7 @@ import { inject } from '@angular/core';
 
 /** Íconos de línea (trazo 2px, color del texto) usados en el menú. */
 const ICONOS: Record<string, string> = {
+  mensaje: '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 10 10 0 0 1-4-.9L3 21l1.9-5.5A10 10 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3h.5a8.5 8.5 0 0 1 8 8v.5z"/><path d="M8 11h9M8 14h6"/>',
   inicio: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>',
   ordenes:
     '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h6M9 14h6M9 18h4"/>',
