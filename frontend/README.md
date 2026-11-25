@@ -18,6 +18,17 @@ Run `ng build` to build the project. The build artifacts will be stored in the `
 
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
 
+Para ejecutar una sola vez las pruebas de formularios y permisos en Chrome sin interfaz:
+
+```powershell
+npm.cmd run test:ci
+```
+
+El comando detecta Chrome o Edge instalado en Windows. También admite `CHROME_BIN`
+con la ruta del navegador. Las pruebas de componentes usan servicios simulados;
+no requieren backend ni alteran datos del taller. No verifican la sincronización
+offline ni sustituyen pruebas de extremo a extremo de la aplicación completa.
+
 ## Running end-to-end tests
 
 Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.

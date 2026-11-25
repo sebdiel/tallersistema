@@ -1,6 +1,46 @@
 # TallerPro — Sistema Web Progresivo para talleres mecánicos
 
 Proyecto de Grado — Ingeniería de Sistemas, UAB.
+
+## Pruebas reproducibles del flujo de órdenes
+
+Con Docker encendido y las dependencias del backend instaladas:
+
+```powershell
+cd backend
+npm.cmd test -- --runInBand
+npm.cmd run test:e2e
+```
+
+`test:e2e` crea un PostgreSQL 16 temporal, sin volúmenes y con puerto local aleatorio.
+Genera credenciales exclusivas, aplica todas las migraciones sobre una base vacía,
+inicia la API de pruebas y elimina el contenedor al finalizar. No utiliza las
+credenciales ni los datos del taller. La primera ejecución puede descargar la imagen
+`postgres:16-alpine`.
+
+La suite HTTP comprueba autenticación, recepción de cliente y vehículo, rechazo de
+órdenes duplicadas, adelantos, asignación, diagnóstico obligatorio, descuento de
+stock, repuestos externos, mano de obra, presupuesto conservado, motivo obligatorio
+al editar precios, rechazo de sobrepagos, cobro y cierre de la orden.
+Verificación del 25/11/2026: **34 pruebas unitarias y 8 pruebas de integración aprobadas**.
+Estas pruebas no sustituyen las pruebas de pantallas ni las del funcionamiento offline.
+
+### Pruebas de formularios y permisos del frontend
+
+```powershell
+cd frontend
+npm.cmd run test:ci
+```
+
+Ejecuta **20 pruebas en Chrome sin interfaz** (Karma/Jasmine), con datos simulados:
+recepción, validación de cliente y vehículo, confirmación de fecha ocupada,
+visibilidad por etapa, ventanas de costos, selección de servicios, manejo de errores
+de stock, descuento por rol, acceso a rutas y enlace de WhatsApp. El comando busca
+Chrome o Edge en Windows; se puede indicar otra ubicación mediante `CHROME_BIN`.
+No necesita una API encendida y no modifica la base del taller. No envía mensajes.
+Verificación del 25/11/2026: **20 aprobadas**. Estas son pruebas de componentes y
+guards, no una revisión visual manual ni una prueba de la PWA sin conexión.
+
 Sistema web progresivo basado en reglas de negocio automatizadas para la gestión operativa de talleres mecánicos de microempresas en Cochabamba.
 
 | Capa | Tecnología |

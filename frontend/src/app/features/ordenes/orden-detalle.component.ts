@@ -286,9 +286,11 @@ export class OrdenDetalleComponent implements OnInit {
     await this.ejecutar(() =>
       this.datos.agregarRepuesto(this.orden()!, this.repuestoId, Number(this.cantidad)),
     );
-    this.repuestoId = '';
-    this.cantidad = 1;
-    if (!this.error()) this.modal.set(null);
+    if (!this.error()) {
+      this.repuestoId = '';
+      this.cantidad = 1;
+      this.modal.set(null);
+    }
   }
 
   quitar(linea: OrdenRepuesto) {

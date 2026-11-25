@@ -520,6 +520,12 @@ export class OrdenesService {
       const delCliente = linea.origen === OrigenRepuestoExterno.CLIENTE;
       const cantidad = dto.cantidad ?? linea.cantidad;
       const precioUnitario = delCliente ? 0 : (dto.precioUnitario ?? linea.precioUnitario);
+      if (orden.presupuestoAprobado != null &&
+          (cantidad !== linea.cantidad || precioUnitario !== linea.precioUnitario ||
+           (dto.costoUnitario !== undefined && dto.costoUnitario !== linea.costoUnitario)) &&
+          !dto.motivo?.trim()) {
+        throw new BadRequestException('Indique el motivo del cambio después del presupuesto aprobado');
+      }
       const baja = linea.cantidad * linea.precioUnitario - cantidad * precioUnitario;
       if (baja > 0) await this.verificarTotalCubrePagos(m, orden, baja);
 
@@ -543,6 +549,11 @@ export class OrdenesService {
       if (!linea) throw new NotFoundException('La mano de obra no está en la orden');
 
       const monto = dto.monto ?? linea.monto;
+      if (orden.presupuestoAprobado != null &&
+          (monto !== linea.monto || (dto.descripcion !== undefined && dto.descripcion !== linea.descripcion)) &&
+          !dto.motivo?.trim()) {
+        throw new BadRequestException('Indique el motivo del cambio después del presupuesto aprobado');
+      }
       if (linea.monto - monto > 0) await this.verificarTotalCubrePagos(m, orden, linea.monto - monto);
 
       await m.update(OrdenManoObra, linea.id, {
