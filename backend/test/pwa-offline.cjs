@@ -58,7 +58,11 @@ async function main() {
       res.setHeader('Content-Type', mime[path.extname(file)] || 'application/octet-stream');
       res.setHeader('Cache-Control', 'no-cache'); fs.createReadStream(file).pipe(res);
     });
-    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const puertoWeb = manual ? Number(process.env.PWA_TEST_PORT || 8080) : 0;
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(puertoWeb, '127.0.0.1', () => { server.removeListener('error', reject); resolve(); });
+    });
     const origin = `http://127.0.0.1:${server.address().port}`;
     async function api(route, method = 'GET', body, token) {
       const response = await fetch(origin + '/api' + route, { method,
@@ -153,13 +157,13 @@ async function main() {
       console.log('Contraseña de prueba: ' + process.env.SEED_ADMIN_PASSWORD);
       console.log('F12 > Network > Offline. Registre una orden y compruebe pendientes.');
       console.log('Recargue sin conexión; luego cambie a No throttling para sincronizar.');
-      console.log('Al terminar, cierre esta ventana de Chrome o presione Enter en esta terminal.');
+      console.log('Mantenga esta terminal abierta. Cerrar Chrome ya no detiene el servidor.');
+      console.log('Al terminar la prueba, presione Enter en esta terminal para apagarla.');
       console.log('Los datos son temporales y se eliminan al terminar esta prueba.\n');
       await new Promise(resolve => {
         const rl = require('node:readline').createInterface({ input: process.stdin, output: process.stdout });
-        const fin = () => { rl.close(); browser.removeListener('close', fin); resolve(); };
+        const fin = () => { rl.close(); resolve(); };
         rl.once('line', fin);
-        browser.once('close', fin);
       });
       return;
     }

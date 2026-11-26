@@ -229,8 +229,9 @@ npm.cmd run test:pwa:manual
 
 El comando abre una sesión de prueba y espera a que termine la precarga offline.
 Después permite usar F12 → Network → Offline, registrar cambios, recargar y volver
-a No throttling para sincronizar. Cerrar esa ventana o presionar Enter en la
-terminal finaliza la prueba y elimina sus datos temporales. El enlace es local a
+a No throttling para sincronizar. La dirección manual es http://127.0.0.1:8080
+(puede cambiarse con PWA_TEST_PORT). Cerrar Chrome no apaga el servidor: mantenga
+la terminal abierta y presione Enter allí cuando termine para eliminar los datos temporales. El enlace es local a
 esta computadora; no permite probar directamente desde un celular.
 
 Usa Playwright con un perfil temporal de Chrome y PostgreSQL desechable. Compila
