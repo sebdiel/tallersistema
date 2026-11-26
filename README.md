@@ -1,6 +1,177 @@
-# TallerPro — Sistema Web Progresivo para talleres mecánicos
+# MotoraApp — Sistema Web Progresivo para talleres mecánicos
 
 Proyecto de Grado — Ingeniería de Sistemas, UAB.
+Sistema basado en reglas de negocio para la gestión operativa de talleres mecánicos de microempresas en Cochabamba.
+
+Estado revisado el **25/11/2026**. «TallerPro» es el nombre anterior; algunos identificadores internos, como la base IndexedDB `tallerpro`, conservan ese nombre para mantener los datos existentes.
+
+## Funciones actuales
+
+- Clientes y vehículos con ficha e historial, incluido combustible GASOLINA/GNV.
+- Recepción con motivo de ingreso, kilometraje, costo estimado opcional y fecha estimada de entrega.
+- Calendario de entregas en Inicio, días ocupados y órdenes atrasadas.
+- Detalle de órdenes por etapas, asignación de mecánico y diagnóstico documentado.
+- Inventario con movimientos y descuento de stock; repuestos externos aportados por el cliente o del taller fuera del inventario.
+- Mano de obra desde catálogo o trabajo libre, costos separados y edición de precios con motivo después del presupuesto.
+- Presupuestos y comprobantes imprimibles; el comprobante no es factura fiscal del SIN.
+- Adelantos, pagos parciales, descuentos del administrador y entrega a crédito con comentario.
+- Notificaciones con contador y enlace de WhatsApp en Terminado: el operador revisa y envía el mensaje.
+- Indicadores para el administrador, gestión de talleres y suscripciones para el SuperAdmin.
+- PWA con Service Worker, IndexedDB/Dexie y cola de sincronización, temas claro e industrial.
+
+## Tecnología y estructura
+
+| Capa | Implementación |
+|---|---|
+| Interfaz | Angular 18, componentes standalone, señales, Chart.js |
+| Trabajo offline | Service Worker de Angular e IndexedDB con Dexie |
+| API | NestJS 10, TypeORM, JWT, bcrypt y validación de DTO |
+| Datos | PostgreSQL 16; 6 migraciones versionadas |
+| Producción | Docker Compose, Caddy HTTPS y pg_dump/pg_restore |
+| Pruebas | Jest/Supertest, Karma/Jasmine y Playwright |
+
+- `backend/src`: autenticación, usuarios, clientes, vehículos, órdenes, inventario, reglas, sync, dashboard, suscripciones y migraciones.
+- `backend/test`: integración HTTP y recorrido PWA aislados.
+- `frontend/src/app`: interfaz, sesión, datos locales, sincronización y componentes.
+- `frontend/test`: ejecución de las pruebas de componentes en Chrome/Edge.
+- `deploy`: respaldo, restauración y prueba aislada de producción.
+- `docs`: actualización técnica para incorporar a la tesis.
+
+## Ejecutar en desarrollo
+
+Requiere Node.js, npm y Docker Desktop. El compose de desarrollo utiliza PostgreSQL en el puerto 5432.
+
+Primera terminal, desde la raíz:
+
+```powershell
+docker compose up -d
+cd backend
+# Solo si todavía no existe .env:
+Copy-Item .env.example .env
+npm.cmd ci
+npm.cmd run start:dev
+```
+
+Segunda terminal, desde la raíz:
+
+```powershell
+cd frontend
+npm.cmd ci
+npm.cmd start
+```
+
+Abrir http://localhost:4200. La API se publica en http://localhost:3000/api.
+No reemplace un archivo `.env` ya configurado. En desarrollo, las credenciales de demostración se definen en `backend/.env.example`; en producción deben configurarse credenciales propias, sin taller demo.
+
+El Service Worker está desactivado en `ng serve`. Para verificar offline use el comando de prueba PWA indicado más abajo.
+
+## Flujo de una orden
+
+| Estado | Trabajo principal |
+|---|---|
+| RECIBIDO | Revisar recepción, asignar mecánico y registrar adelanto si corresponde. |
+| EN_DIAGNOSTICO | Documentar la falla y armar el presupuesto con repuestos y mano de obra. |
+| EN_REPARACION | Ejecutar el trabajo y corregir cargos con motivo si existe presupuesto guardado. |
+| TERMINADO | Avisar al cliente, cobrar el saldo y preparar la entrega. |
+| ENTREGADO | Consultar el registro cerrado; si hubo entrega a crédito, registrar el cobro pendiente. |
+
+Antes de terminar se puede cancelar con motivo y sin pagos vigentes. Los repuestos del inventario se devuelven. Desde TERMINADO se puede reabrir EN_REPARACION con motivo. Actualmente no existe la transición EN_REPARACION → EN_DIAGNOSTICO.
+
+El presupuesto guardado conserva el monto al iniciar Reparación y permite comparar diferencias. No constituye una firma ni una constancia de aprobación del cliente: el registro del medio de aprobación fue retirado.
+
+### Repuestos y pagos
+
+- Inventario: descuenta stock y conserva el precio registrado en la línea.
+- Externo del cliente: se registra con precio cero; la instalación se cobra como mano de obra.
+- Externo del taller: se cobra sin descontar inventario y puede registrar costo de compra.
+- Total = repuestos del inventario + repuestos externos cobrables + mano de obra − descuento.
+- En Recibido y Diagnóstico se permiten adelantos aunque no haya cargos suficientes todavía. Desde Reparación el pago no puede superar el saldo.
+- No se permite terminar o entregar con sobrepago. La entrega con deuda requiere administrador y comentario.
+
+## Suscripciones
+
+Modelo SaaS con un plan único; precio de referencia configurable mediante `PRECIO_SUSCRIPCION` (Bs 90/mes por defecto). La prueba inicial predeterminada es de 15 días. El SuperAdmin registra los pagos manualmente; no hay pasarela automática ni planes Básico/Gold implementados.
+
+| Estado | Condición | Acceso |
+|---|---|---|
+| ACTIVA | Faltan más de 7 días | Habilitado |
+| POR_VENCER | Faltan entre 0 y 7 días | Habilitado con aviso |
+| EN_GRACIA | Entre 1 y 5 días después de vencer | Habilitado con aviso |
+| VENCIDA | Más de 5 días después de vencer | Bloqueado |
+| SUSPENDIDA | Suspensión manual | Bloqueado |
+
+## Historias de usuario de las cuatro iteraciones originales
+
+Se conserva la numeración HU-01 a HU-29. Las ampliaciones posteriores se describen en las funciones actuales; no se presentan como historias adicionales ya aprobadas por el tutor.
+
+| HU | Historia | Estado |
+|---|---|---|
+| HU-01 | Iniciar sesión con correo y contraseña | ✅ |
+| HU-02 | El administrador gestiona mecánicos (crear, editar, desactivar) | ✅ |
+| HU-03 | Acceso restringido por rol (backend y menú) | ✅ |
+| HU-04 | Registrar clientes | ✅ |
+| HU-05 | Buscar clientes por nombre, CI/NIT o teléfono | ✅ |
+| HU-06 | Registrar vehículos vinculados a un cliente | ✅ |
+| HU-07 | Buscar por placa y ver la ficha técnica del vehículo | ✅ Historial implementado |
+| HU-08 | Instalar como PWA | ✅ (manifest + Service Worker) |
+| HU-09 | Abrir una OT al recibir el vehículo | ✅ |
+| HU-10 | Avanzar la OT según la máquina de estados | ✅ |
+| HU-11 | Asignar mecánico (el mecánico también puede tomar una OT libre) | ✅ |
+| HU-12 | Registrar repuestos, entradas de stock y ajustes por conteo | ✅ |
+| HU-13 | Agregar repuestos a la OT con descuento automático de stock | ✅ |
+| HU-14 | Alerta de stock bajo el mínimo | ✅ |
+| HU-15 | Registrar y trabajar la OT sin internet (IndexedDB) | ✅ |
+| HU-16 | Sincronización automática al volver la conexión | ✅ |
+| HU-17 | No cerrar una OT sin repuestos registrados ni confirmación | ✅ |
+| HU-18 | Registrar mano de obra, libre o desde un **catálogo de servicios con precio estándar** | ✅ |
+| HU-19 | Cálculo automático del costo total (repuestos + mano de obra − descuento) | ✅ |
+| HU-20 | Comprobante / presupuesto imprimible o en PDF ("No válido como factura") | ✅ |
+| HU-21 | Registrar pagos totales, parciales o adelantos (efectivo, QR, transferencia, tarjeta) | ✅ (también sin conexión) |
+| HU-22 | Dashboard: ingresos, OT entregadas, ticket promedio, tiempo de reparación, cumplimiento, reaperturas, margen | ✅ |
+| HU-23 | KPIs de inventario: repuestos más vendidos, cobertura en días, valor del inventario, repuestos sin salida | ✅ |
+| HU-24 | Filtro por período (7 días, 30 días, mes, mes anterior, año o rango libre) con comparación contra el período anterior | ✅ |
+| HU-25 | El SUPERADMIN registra talleres con su administrador y días de prueba | ✅ |
+| HU-26 | Gestionar suscripciones: registrar pagos, suspender y reactivar, restablecer contraseñas | ✅ |
+| HU-27 | Bloqueo automático por vencimiento, con período de gracia y avisos programados | ✅ |
+| HU-28 | Panel global: talleres por estado, ingreso recurrente, cobros por mes, cobranza pendiente y uso por taller | ✅ |
+| HU-29 | Despliegue en VPS con HTTPS, migraciones y backups automáticos | ✅ Listo y probado localmente (ver [DEPLOY.md](DEPLOY.md)) |
+
+## Reglas de negocio documentadas
+
+| Código | Regla | Implementación |
+|---|---|---|
+| RN-01 | La placa es única por taller y se normaliza (`2345 abc` → `2345ABC`) | `vehiculos.service.ts`, `placa.util.ts` |
+| RN-02 | Solo el ADMIN gestiona usuarios | `@Roles(Rol.ADMIN)` en `usuarios.controller.ts` |
+| RN-03 | Un usuario desactivado no puede ingresar y su sesión se corta de inmediato | `auth.service.ts`, `jwt.strategy.ts` |
+| RN-04 | Un cliente con vehículos no se elimina, solo se desactiva | `clientes.service.ts` |
+| RN-05 | El kilometraje de un vehículo no puede disminuir | `vehiculos.service.ts` |
+| RN-06 | Un vehículo solo puede tener una OT abierta | `ordenes.service.ts` (con bloqueo de fila) |
+| RN-07 | El kilometraje de ingreso no puede ser menor al último; la OT lo actualiza | `ordenes.service.ts` |
+| RN-08 | Solo se permiten las transiciones de la máquina de estados | `maquina-estados.ts` |
+| RN-09 | No se pasa a reparación sin diagnóstico; no se diagnostica sin mecánico | `maquina-estados.ts` |
+| RN-10 | Usar un repuesto descuenta stock; nunca queda negativo (UPDATE atómico) | `repuestos.service.ts → moverStock` |
+| RN-11 | No se termina una OT sin repuestos registrados o confirmación de "sin repuestos" | `maquina-estados.ts` |
+| RN-12 | Alerta automática de stock mínimo, que se resuelve sola al reponer | `reglas/reglas.listener.ts` |
+| RN-13 | Al terminar una OT se genera el aviso "avisar al cliente" | `reglas/reglas.listener.ts` |
+| RN-14 | Cancelar una OT (con motivo) devuelve los repuestos al inventario | `ordenes.service.ts` |
+| RN-15 | El total se calcula siempre igual en servidor y dispositivo; los precios se congelan al registrar cada línea | `ordenes/costos.ts` (y su copia en `frontend/core/costos.ts`) |
+| RN-16 | Solo el administrador aplica descuentos, y nunca mayores al subtotal | `ordenes.service.ts → aplicarDescuento` |
+| RN-17 | Los pagos respetan el saldo, excepto adelantos en Recibido/Diagnóstico; descuentos y bajas de cargos respetan lo ya cobrado | `ordenes.service.ts` |
+| RN-18 | No se entrega con saldo pendiente, salvo **entrega a crédito** autorizada por el administrador con comentario | `maquina-estados.ts` |
+| RN-19 | No se cancela una OT con pagos vigentes; los pagos no se borran, se **anulan con motivo** | `maquina-estados.ts`, `anularPago` |
+| RN-20 | Mano de obra, descuento y cobros se editan mientras la OT está abierta; tras entregar, los costos quedan cerrados | `ordenes.service.ts → verificarEstadoCostos` |
+| RN-21 | Durante 5 días de gracia tras vencer, el taller sigue trabajando con un aviso visible | `admin/suscripcion.ts` |
+| RN-22 | Vencida o suspendida: se bloquea el login **y se cortan las sesiones abiertas**, explicando el motivo | `auth.service.ts`, `jwt.strategy.ts` |
+| RN-23 | Un pago extiende desde el vencimiento si aún no venció (no se pierden días) o desde hoy si ya venció | `admin/suscripcion.ts → nuevaVigencia` |
+| RN-24 | Todos los días a las 07:00 (hora de Bolivia) se avisa a los talleres por vencer o en gracia; el aviso se cierra solo al pagar | `admin/suscripciones.tareas.ts` (@Cron) |
+| RN-25 | El SUPERADMIN solo ve cifras de uso de cada taller, nunca sus clientes ni sus órdenes | `admin.service.ts` |
+| RN-26 | Fecha estimada no anterior a recepción | DTO, servicio de órdenes y calendario |
+| RN-27 | Costo estimado opcional y no negativo | DTO y recepción |
+| RN-28 | Repuesto externo no afecta stock; si lo aporta el cliente, precio cero | Entidad y servicio de órdenes |
+| RN-29 | Presupuesto guardado y motivo al editar precios posteriormente | Servicio, datos locales y detalle |
+| RN-30 | Adelantos en etapas iniciales; no terminar ni entregar con sobrepago | Pagos y máquina de estados |
+
+La asignación de mecánico está en el detalle de la orden. Las propuestas retiradas (aprobación por medio y retroceso a Diagnóstico) no se consideran funciones vigentes.
 
 ## Pruebas reproducibles del flujo de órdenes
 
@@ -41,239 +212,53 @@ No necesita una API encendida y no modifica la base del taller. No envía mensaj
 Verificación del 25/11/2026: **20 aprobadas**. Estas son pruebas de componentes y
 guards, no una revisión visual manual ni una prueba de la PWA sin conexión.
 
-Sistema web progresivo basado en reglas de negocio automatizadas para la gestión operativa de talleres mecánicos de microempresas en Cochabamba.
+### Prueba de la PWA sin conexión
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | Angular 18 + `@angular/pwa` (Service Worker) |
-| Backend | NestJS 10 (API REST, JWT, roles) |
-| Base de datos | PostgreSQL 16 (Docker) + TypeORM |
+Con Docker y Chrome/Edge disponibles, y las dependencias de ambas carpetas instaladas:
 
-```
-tallersistema/
-├── backend/            API NestJS
-│   └── src/
-│       ├── auth/       login JWT (HU-01)
-│       ├── usuarios/   gestión de personal (HU-02)
-│       ├── clientes/   registro y búsqueda (HU-04, HU-05)
-│       ├── vehiculos/  ficha técnica e historial (HU-06, HU-07)
-│       ├── talleres/   entidad multi-taller (base para Iteración 4)
-│       ├── repuestos/  inventario y kardex (HU-12, HU-14)
-│       ├── ordenes/    órdenes de trabajo + máquina de estados (HU-09 a HU-13, HU-17)
-│       ├── reglas/     motor de reglas por eventos + alertas (RN-12, RN-13)
-│       ├── sync/       sincronización offline idempotente (HU-16)
-│       ├── servicios/  catálogo de servicios con precio estándar (HU-18)
-│       ├── dashboard/  KPIs calculados en SQL (HU-22 a HU-24)
-│       ├── admin/      SuperAdmin: talleres, suscripciones, tarea diaria (HU-25 a HU-28)
-│       ├── database/migraciones/  esquema versionado para producción (HU-29)
-│       ├── common/     guards de rol (HU-03), decoradores, utilidades
-│       └── database/   datos iniciales (seed)
-├── frontend/           PWA Angular
-│   └── src/app/
-│       ├── core/       sesión, API, IndexedDB (db.ts), cola offline (sync.service.ts),
-│       │               acceso a datos Local-First (datos.service.ts), máquina de estados
-│       ├── layout/     barra, menú por rol e indicador de sincronización
-│       └── features/   login, inicio, clientes, vehículos, usuarios,
-│                       ordenes (+ comprobante), inventario, sync,
-│                       dashboard (indicadores), configuracion, admin (SuperAdmin)
-├── deploy/             backup.sh (respaldo diario), restaurar.sh
-├── docker-compose.yml       PostgreSQL 16 (desarrollo)
-├── docker-compose.prod.yml  producción: Caddy HTTPS + API + PostgreSQL + backups
-└── DEPLOY.md                guía de despliegue en el VPS
-```
-
-## Cómo ejecutar (desarrollo)
-
-Requisitos: Node 20+, Docker Desktop abierto.
-
-```bash
-# 1. Base de datos
-docker compose up -d
-
-# 2. Backend  →  http://localhost:3000/api
+```powershell
 cd backend
-cp .env.example .env      # solo la primera vez
-npm install
-npm run start:dev
-
-# 3. Frontend  →  http://localhost:4200
-cd frontend
-npm install
-npm start
+npm.cmd run test:pwa
 ```
 
-Al primer arranque el backend crea automáticamente:
+Usa Playwright con un perfil temporal de Chrome y PostgreSQL desechable. Compila
+Angular con `production,pwa-test` (Service Worker real; solo se desactiva la descarga
+de fuentes de Google durante la compilación). Publica frontend y API en puertos
+locales aleatorios y espera la precarga completa de los módulos de la aplicación.
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Administrador del taller | `admin@taller.bo` | `Admin123` |
-| Super administrador | `superadmin@taller.bo` | `SuperAdmin123` |
+El recorrido comprueba inicio de sesión y descarga inicial, creación de una orden
+offline, asignación, diagnóstico, repuesto con descuento local de stock, mano de
+obra y pago. Cierra completamente Chrome, lo reabre sin conexión con el mismo
+perfil y verifica que conserva la orden y las 8 operaciones pendientes. Después
+reconecta, comprueba total Bs 170, pagado Bs 50 y saldo Bs 120, y reenvía las mismas
+operaciones para verificar que no duplica la orden, cargos, pago ni salida de stock.
+Los recursos de prueba se eliminan al terminar; no se usan los datos del taller.
 
-Pruebas unitarias del backend: `cd backend && npm test`.
+Verificado el 25/11/2026 en Chrome de escritorio. La primera visita debe hacerse
+con conexión y esperar a que termine la descarga: activar el Service Worker por sí
+solo no garantiza que todos los módulos estén ya disponibles offline. No sustituye
+las comprobaciones en un teléfono real ni las de instalación de la PWA móvil.
 
-Para probar la PWA instalable y el Service Worker hay que usar el build de producción (`ng build`), porque en `ng serve` el Service Worker está desactivado.
+### Validación de producción y restauración de backups
 
-## Iteración 1: Usuarios, clientes y vehículos (OE1)
+Desde la raíz, con Docker encendido:
 
-| HU | Historia | Estado |
-|---|---|---|
-| HU-01 | Iniciar sesión con correo y contraseña | ✅ |
-| HU-02 | El administrador gestiona mecánicos (crear, editar, desactivar) | ✅ |
-| HU-03 | Acceso restringido por rol (backend y menú) | ✅ |
-| HU-04 | Registrar clientes | ✅ |
-| HU-05 | Buscar clientes por nombre, CI/NIT o teléfono | ✅ |
-| HU-06 | Registrar vehículos vinculados a un cliente | ✅ |
-| HU-07 | Buscar por placa y ver la ficha técnica del vehículo | ✅ (el historial se llena en la Iteración 2) |
-| HU-08 | Instalar como PWA | ✅ (manifest + Service Worker) |
-
-### Reglas de negocio implementadas
-
-| Código | Regla | Dónde |
-|---|---|---|
-| RN-01 | La placa es única por taller y se normaliza (`2345 abc` → `2345ABC`) | `vehiculos.service.ts`, `placa.util.ts` |
-| RN-02 | Solo el ADMIN gestiona usuarios | `@Roles(Rol.ADMIN)` en `usuarios.controller.ts` |
-| RN-03 | Un usuario desactivado no puede ingresar y su sesión se corta de inmediato | `auth.service.ts`, `jwt.strategy.ts` |
-| RN-04 | Un cliente con vehículos no se elimina, solo se desactiva | `clientes.service.ts` |
-| RN-05 | El kilometraje de un vehículo no puede disminuir | `vehiculos.service.ts` |
-
-### Decisiones de diseño para las siguientes iteraciones
-
-- **Multi-taller desde el inicio:** todas las tablas operativas tienen `taller_id` y cada consulta se filtra por el taller del usuario. La Iteración 4 (SuperAdmin y suscripciones) no requiere rehacer el modelo.
-- **UUID como clave primaria:** permite crear registros offline en IndexedDB (Iteración 2) sin choques de id al sincronizar.
-- **`DB_SYNC=true` solo en desarrollo:** antes del despliegue en el VPS (Iteración 4) se reemplaza por migraciones de TypeORM.
-
-## Iteración 2: Órdenes de trabajo, inventario y modo offline (OE2)
-
-| HU | Historia | Estado |
-|---|---|---|
-| HU-09 | Abrir una OT al recibir el vehículo | ✅ |
-| HU-10 | Avanzar la OT según la máquina de estados | ✅ |
-| HU-11 | Asignar mecánico (el mecánico también puede tomar una OT libre) | ✅ |
-| HU-12 | Registrar repuestos, entradas de stock y ajustes por conteo | ✅ |
-| HU-13 | Agregar repuestos a la OT con descuento automático de stock | ✅ |
-| HU-14 | Alerta de stock bajo el mínimo | ✅ |
-| HU-15 | Registrar y trabajar la OT sin internet (IndexedDB) | ✅ |
-| HU-16 | Sincronización automática al volver la conexión | ✅ |
-| HU-17 | No cerrar una OT sin repuestos registrados ni confirmación | ✅ |
-
-### Máquina de estados de la OT
-
-```
-RECIBIDO ─► EN_DIAGNOSTICO ─► EN_REPARACION ─► TERMINADO ─► ENTREGADO
-   │              │                 │    ▲           │
-   └──────────────┴─────► CANCELADO ◄┘    └───────────┘ (reabrir con motivo)
+```powershell
+node deploy/test-produccion.cjs
 ```
 
-### Reglas de negocio de la iteración
+Construye el stack de producción en un proyecto Docker temporal con puertos locales,
+comprueba HTTPS, redirección, caché, cabeceras y las 6 migraciones, y verifica un
+respaldo automático restaurándolo en otra base. Confirmado el 25/11/2026 con datos
+de prueba y un adelanto de Bs 50. No toca `.env.prod` ni los datos del taller y no
+equivale a verificar un VPS publicado. Más detalles en [DEPLOY.md](DEPLOY.md).
 
-| Código | Regla | Dónde |
-|---|---|---|
-| RN-06 | Un vehículo solo puede tener una OT abierta | `ordenes.service.ts` (con bloqueo de fila) |
-| RN-07 | El kilometraje de ingreso no puede ser menor al último; la OT lo actualiza | `ordenes.service.ts` |
-| RN-08 | Solo se permiten las transiciones de la máquina de estados | `maquina-estados.ts` |
-| RN-09 | No se pasa a reparación sin diagnóstico; no se diagnostica sin mecánico | `maquina-estados.ts` |
-| RN-10 | Usar un repuesto descuenta stock; nunca queda negativo (UPDATE atómico) | `repuestos.service.ts → moverStock` |
-| RN-11 | No se termina una OT sin repuestos registrados o confirmación de "sin repuestos" | `maquina-estados.ts` |
-| RN-12 | Alerta automática de stock mínimo, que se resuelve sola al reponer | `reglas/reglas.listener.ts` |
-| RN-13 | Al terminar una OT se genera el aviso "avisar al cliente" | `reglas/reglas.listener.ts` |
-| RN-14 | Cancelar una OT (con motivo) devuelve los repuestos al inventario | `ordenes.service.ts` |
+## Pendientes antes de una entrega final
 
-### Cómo funciona el modo offline (Local-First)
+- Comprobar instalación, visualización y offline en un teléfono real.
+- Verificar dominio, DNS, certificado público y firewall cuando se publique en un VPS.
+- Revisar las alertas de seguridad de dependencias detectadas por npm, sin aplicar actualizaciones incompatibles a ciegas.
+- Ejecutar un piloto en el taller y recoger aceptación e indicadores antes/después: las pruebas locales no demuestran reducción de tiempos ni satisfacción de usuarios reales.
+- Integrar el suplemento Word a la tesis original, ajustar numeración y revisar figuras; el original no estaba disponible en su ubicación anterior durante esta actualización.
 
-1. Al entrar, el dispositivo descarga una copia de los datos del taller (`GET /api/sync/snapshot`) en IndexedDB.
-2. Cada cambio en una OT se valida en el dispositivo (las mismas reglas que el servidor), se aplica en la copia local y se guarda en una **cola de operaciones**.
-3. Con conexión, la cola se envía al instante (`POST /api/sync`). Sin conexión, espera y se envía sola al volver internet.
-4. El servidor procesa cada operación **una sola vez**: tiene un id único y reenviarla no duplica nada. Si una operación ya no cumple una regla al llegar (por ejemplo, otro usuario usó el último repuesto), se informa como **conflicto** en la pantalla *Sincronización*.
-5. Se conserva la hora real en la que se hizo cada cambio en el dispositivo. Los KPIs de tiempo de la Iteración 3 dependen de ese dato.
-
-> El modo offline completo (abrir la app sin internet) requiere el build de producción, porque en `ng serve` el Service Worker está desactivado.
-
-### Pruebas realizadas
-
-- **Unitarias** (`npm test` en backend): máquina de estados y normalización de placa (10 pruebas).
-- **API de punta a punta**: 33 comprobaciones del flujo completo: inventario, OT, reglas RN-06 a RN-14, alertas, sincronización idempotente y conflictos.
-- **Navegador real con PWA de producción** (Edge sin interfaz, 412 px de ancho): recibir un vehículo y un cliente nuevos sin internet, diagnosticar, cargar repuestos, recargar la app sin conexión, volver a tener conexión y comprobar que el servidor confirma todo (15 comprobaciones).
-
-## Iteración 3: Costos, pagos y dashboard de KPIs (OE3)
-
-| HU | Historia | Estado |
-|---|---|---|
-| HU-18 | Registrar mano de obra, libre o desde un **catálogo de servicios con precio estándar** | ✅ |
-| HU-19 | Cálculo automático del costo total (repuestos + mano de obra − descuento) | ✅ |
-| HU-20 | Comprobante / presupuesto imprimible o en PDF ("No válido como factura") | ✅ |
-| HU-21 | Registrar pagos totales, parciales o adelantos (efectivo, QR, transferencia, tarjeta) | ✅ (también sin conexión) |
-| HU-22 | Dashboard: ingresos, OT entregadas, ticket promedio, tiempo de reparación, cumplimiento, reaperturas, margen | ✅ |
-| HU-23 | KPIs de inventario: repuestos más vendidos, cobertura en días, valor del inventario, repuestos sin salida | ✅ |
-| HU-24 | Filtro por período (7 días, 30 días, mes, mes anterior, año o rango libre) con comparación contra el período anterior | ✅ |
-
-### Reglas de negocio de la iteración
-
-| Código | Regla | Dónde |
-|---|---|---|
-| RN-15 | El total se calcula siempre igual en servidor y dispositivo; los precios se congelan al registrar cada línea | `ordenes/costos.ts` (y su copia en `frontend/core/costos.ts`) |
-| RN-16 | Solo el administrador aplica descuentos, y nunca mayores al subtotal | `ordenes.service.ts → aplicarDescuento` |
-| RN-17 | Ningún pago supera el saldo; ningún descuento o quitar un cargo deja el total por debajo de lo ya pagado | `ordenes.service.ts` |
-| RN-18 | No se entrega con saldo pendiente, salvo **entrega a crédito** autorizada por el administrador con comentario | `maquina-estados.ts` |
-| RN-19 | No se cancela una OT con pagos vigentes; los pagos no se borran, se **anulan con motivo** | `maquina-estados.ts`, `anularPago` |
-| RN-20 | Mano de obra, descuento y cobros se editan mientras la OT está abierta; tras entregar, los costos quedan cerrados | `ordenes.service.ts → verificarEstadoCostos` |
-
-### Indicadores (cómo se calculan)
-
-| KPI | Cálculo |
-|---|---|
-| Ingresos cobrados | Σ pagos no anulados en el período (hora de Bolivia) |
-| Ticket promedio | Facturado de las OT entregadas ÷ cantidad de OT entregadas |
-| Tiempo promedio de reparación | Promedio de (fecha terminado − fecha ingreso) |
-| Tiempo por etapa | Promedio del tiempo entre cada cambio de estado (historial), para detectar cuellos de botella |
-| Cumplimiento | % de OT recibidas en el período que ya fueron entregadas |
-| Reaperturas (retrabajo) | % de OT terminadas que se reabrieron (TERMINADO → EN_REPARACION) |
-| Margen en repuestos | Σ cantidad × (precio de venta − precio de compra) congelados en la OT |
-| Cobertura de stock | Stock actual ÷ consumo diario promedio del período |
-| Cuentas por cobrar | Saldo de las OT terminadas o entregadas con deuda |
-
-Cada indicador se compara con el período anterior de igual duración (▲/▼ en %). El dashboard es solo para el administrador y requiere conexión (se calcula en el servidor).
-
-### Pruebas realizadas
-
-- **Unitarias** (`npm test` en backend): 15 pruebas (costos, máquina de estados con RN-18/RN-19, placas).
-- **API de punta a punta**: 34 comprobaciones de catálogo, costos, descuentos, pagos, crédito, anulación, sincronización de cobros offline y dashboard.
-- **Navegador real con la PWA de producción**: cargar mano de obra desde el catálogo, descuento, pago por QR, **cobro sin conexión** que se sincroniza solo, entrega, comprobante, dashboard y configuración (16 comprobaciones). También se repitió la prueba offline de la Iteración 2, sin regresiones.
-
-## Iteración 4: Administración global (SuperAdmin) y despliegue (OE4)
-
-| HU | Historia | Estado |
-|---|---|---|
-| HU-25 | El SUPERADMIN registra talleres con su administrador y días de prueba | ✅ |
-| HU-26 | Gestionar suscripciones: registrar pagos, suspender y reactivar, restablecer contraseñas | ✅ |
-| HU-27 | Bloqueo automático por vencimiento, con período de gracia y avisos programados | ✅ |
-| HU-28 | Panel global: talleres por estado, ingreso recurrente, cobros por mes, cobranza pendiente y uso por taller | ✅ |
-| HU-29 | Despliegue en VPS con HTTPS, migraciones y backups automáticos | ✅ Listo y probado localmente (ver [DEPLOY.md](DEPLOY.md)) |
-
-### Ciclo de la suscripción
-
-```
-ACTIVA ──(faltan ≤ 7 días)──► POR_VENCER ──(vence)──► EN_GRACIA ──(5 días)──► VENCIDA
-   ▲                                                                       │
-   └──────────────────────── registrar pago ◄──────────────────────────────┘
-          (SUSPENDIDA: bloqueo manual del SUPERADMIN, en cualquier momento)
-```
-
-### Reglas de negocio de la iteración
-
-| Código | Regla | Dónde |
-|---|---|---|
-| RN-21 | Durante 5 días de gracia tras vencer, el taller sigue trabajando con un aviso visible | `admin/suscripcion.ts` |
-| RN-22 | Vencida o suspendida: se bloquea el login **y se cortan las sesiones abiertas**, explicando el motivo | `auth.service.ts`, `jwt.strategy.ts` |
-| RN-23 | Un pago extiende desde el vencimiento si aún no venció (no se pierden días) o desde hoy si ya venció | `admin/suscripcion.ts → nuevaVigencia` |
-| RN-24 | Todos los días a las 07:00 (hora de Bolivia) se avisa a los talleres por vencer o en gracia; el aviso se cierra solo al pagar | `admin/suscripciones.tareas.ts` (@Cron) |
-| RN-25 | El SUPERADMIN solo ve cifras de uso de cada taller, nunca sus clientes ni sus órdenes | `admin.service.ts` |
-
-### Pruebas realizadas
-
-- **Unitarias** (`npm test` en backend): 24 pruebas. Incluyen los 5 estados de la suscripción, la renovación sin perder días, la suma de meses con fin de mes y la fecha en hora de Bolivia.
-- **Migraciones**: la migración `EsquemaInicial` se aplicó sobre una base vacía y se comparó otra vez contra las entidades: "No changes in database schema".
-- **Stack de producción completo en Docker** (Caddy HTTPS + API + PostgreSQL + backup), con 16 comprobaciones de API a través de HTTPS:
-  - HTTPS, redirección HTTP→HTTPS, PWA, rutas de la SPA, cabeceras de seguridad y base de datos sin puerto público.
-  - Alta de taller, aislamiento entre talleres, pagos, suspensión con corte de sesión, restablecer contraseña, panel global y límite de 5 logins por minuto.
-  - Backup automático creado.
-- **Navegador real contra ese stack**: el SUPERADMIN crea un taller y cobra; el taller entra en gracia y ve el aviso; al vencer se le cierra la sesión con el motivo; renueva y recupera el acceso.
+La guía de despliegue está en [DEPLOY.md](DEPLOY.md). El suplemento para la tesis está en [docs/Actualizacion_tecnica_MotoraApp_2026-11-25.docx](docs/Actualizacion_tecnica_MotoraApp_2026-11-25.docx).

@@ -57,6 +57,14 @@
               "outputHashing": "all",
               "serviceWorker": "ngsw-config.json"
             },
+            "pwa-test": {
+              "outputPath": "dist/pwa-test",
+              "optimization": {
+                "scripts": true,
+                "styles": true,
+                "fonts": false
+              }
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,

@@ -6,7 +6,7 @@ set -eu
 RETENCION_DIAS="${RETENCION_DIAS:-14}"
 
 respaldar() {
-  archivo="/backups/taller_$(date +%Y%m%d_%H%M).dump"
+  archivo="/backups/taller_$(date +%Y%m%d_%H%M%S).dump"
   if pg_dump -Fc -f "$archivo.tmp"; then
     mv "$archivo.tmp" "$archivo"
     echo "[backup] $(date '+%F %T') OK $archivo ($(du -h "$archivo" | cut -f1))"

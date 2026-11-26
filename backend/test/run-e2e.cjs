@@ -29,9 +29,13 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     if (!listo) throw new Error('PostgreSQL de pruebas no arrancó');
-    console.log('PostgreSQL aislado listo. Ejecutando migraciones y pruebas HTTP.');
-    const r = spawnSync(process.execPath, [require.resolve('jest/bin/jest'), '--config', './test/jest-e2e.json', '--runInBand'],
-      { cwd: path.join(__dirname, '..'), env, stdio: 'inherit', timeout: 180000 });
+    const pwa = process.argv.includes('--pwa');
+    console.log(`PostgreSQL aislado listo. Ejecutando ${pwa ? 'prueba PWA en navegador' : 'migraciones y pruebas HTTP'}.`);
+    const args = pwa
+      ? ['-r', 'ts-node/register/transpile-only', 'test/pwa-offline.cjs']
+      : [require.resolve('jest/bin/jest'), '--config', './test/jest-e2e.json', '--runInBand'];
+    const r = spawnSync(process.execPath, args,
+      { cwd: path.join(__dirname, '..'), env, stdio: 'inherit', timeout: pwa ? 420000 : 180000 });
     if (r.error) throw r.error;
     process.exitCode = r.status ?? 1;
   } finally {

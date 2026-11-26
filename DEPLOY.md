@@ -97,15 +97,20 @@ git add src/database/migraciones && git commit -m "Migración: DescripcionDelCam
 
 ## 5. Copias de seguridad
 
-- Se hace un respaldo automático al arrancar y luego cada 24 horas en `./backups/taller_AAAAMMDD_HHMM.dump`. Los respaldos de más de 14 días se borran solos.
+- Se hace un respaldo automático al arrancar y luego cada 24 horas en `./backups/taller_AAAAMMDD_HHMMSS.dump`. La retención predeterminada es de 14 días.
 - **Recomendado:** copiar los respaldos fuera del VPS. Por ejemplo, con `rclone` a Backblaze B2 o Google Drive mediante un cron diario:
   ```bash
   0 4 * * * rclone copy /root/tallersistema/backups remoto:tallerpro-backups
   ```
 - Para restaurar un respaldo (reemplaza los datos actuales):
   ```bash
-  ./deploy/restaurar.sh backups/taller_20261018_0300.dump
+  sh ./deploy/restaurar.sh backups/taller_20261018_0300.dump
   ```
+
+El script comprueba que el archivo se pueda leer antes de detener la API y pide
+escribir `RESTAURAR`. Ejecuta `pg_restore` con `--exit-on-error` y
+`--single-transaction`: ante un error, los cambios de la restauración se revierten.
+También intenta arrancar la API al salir, incluso si la restauración falla.
 
 ## 6. Seguridad aplicada
 
@@ -134,4 +139,40 @@ $C down                          # detener (los datos se conservan en volúmenes
 
 Se puede levantar el mismo stack en una PC con Docker Desktop usando `DOMAIN=localhost`. Caddy genera un certificado local y el navegador mostrará una advertencia de certificado. Para no ocupar los puertos 80 y 443, defina por ejemplo `HTTP_PORT=8081` y `HTTPS_PORT=8443` en el archivo de entorno.
 
-> Con el certificado local, el navegador no registra el Service Worker (exige un certificado de confianza), así que el modo offline completo solo se puede comprobar con el dominio real.
+El navegador necesita confiar en el certificado para registrar el Service Worker
+sobre HTTPS. Para probar el modo offline sin configurar certificados, el comando
+`npm.cmd run test:pwa` dentro de `backend` publica una PWA de prueba sobre HTTP en
+la dirección de loopback, que el navegador permite como contexto seguro.
+
+## Validación automática aislada del despliegue
+
+Con Docker Desktop encendido y Node.js instalado, desde la raíz del repositorio:
+
+```powershell
+node deploy/test-produccion.cjs
+```
+
+El comando utiliza `docker-compose.prod.yml` con un proyecto temporal independiente,
+credenciales aleatorias y puertos publicados únicamente en `127.0.0.1`. No lee
+`.env.prod`, no utiliza los volúmenes del taller y guarda sus backups en una carpeta
+temporal. La primera ejecución descarga dependencias y construye ambas imágenes.
+
+Comprueba:
+
+- HTTPS de Caddy con certificado local y redirección desde HTTP.
+- API a través de Caddy, rutas de Angular, manifiesto PWA y cabeceras de seguridad.
+- Caché de un año para JS/CSS con hash y `no-cache` para el manifiesto del Service Worker.
+- PostgreSQL sin puerto público y backend ejecutándose sin usuario root.
+- Todas las migraciones aplicadas automáticamente sobre una base vacía.
+- Alta de un taller, cliente, vehículo y orden con un adelanto de Bs 50 por la API.
+- Creación de un respaldo con el servicio `backup` real.
+- Restauración transaccional en otra base de prueba y comparación de cantidades,
+  identificadores, motivo, costo estimado, placa, cliente y pago.
+
+Verificado el 25/11/2026: todas estas comprobaciones aprobaron con **6 migraciones**.
+La verificación HTTPS acepta el certificado local exclusivamente en este script.
+No verifica DNS, certificado público, firewall ni disponibilidad de un VPS real;
+esas comprobaciones corresponden al momento de publicar el sistema.
+
+Al finalizar se eliminan los contenedores, volúmenes y archivos temporales de este
+proyecto de pruebas. Las imágenes construidas quedan disponibles en Docker.

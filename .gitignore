@@ -9,3 +9,4 @@ coverage/
 # Producción (Iteración 4)
 .env.prod
 backups/
+docs/vista_previa/

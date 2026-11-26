@@ -22,7 +22,7 @@
 		header @sin_cache Cache-Control "no-cache"
 
 		# JS y CSS llevan un hash en el nombre: se pueden guardar un año.
-		@con_hash path_regexp \.[0-9A-Z]{8}\.(js|css)$
+		@con_hash path_regexp -[0-9A-Z]{8}\.(js|css)$
 		header @con_hash Cache-Control "public, max-age=31536000, immutable"
 
 		# Rutas de la SPA (/ordenes/123) → index.html
