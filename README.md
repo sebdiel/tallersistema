@@ -221,6 +221,18 @@ cd backend
 npm.cmd run test:pwa
 ```
 
+Para practicar con una ventana visible de Chrome y datos temporales:
+
+```powershell
+npm.cmd run test:pwa:manual
+```
+
+El comando abre una sesión de prueba y espera a que termine la precarga offline.
+Después permite usar F12 → Network → Offline, registrar cambios, recargar y volver
+a No throttling para sincronizar. Cerrar esa ventana o presionar Enter en la
+terminal finaliza la prueba y elimina sus datos temporales. El enlace es local a
+esta computadora; no permite probar directamente desde un celular.
+
 Usa Playwright con un perfil temporal de Chrome y PostgreSQL desechable. Compila
 Angular con `production,pwa-test` (Service Worker real; solo se desactiva la descarga
 de fuentes de Google durante la compilación). Publica frontend y API en puertos

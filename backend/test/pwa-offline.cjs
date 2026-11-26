@@ -11,6 +11,7 @@ const frontRequire = createRequire(path.join(frontend, 'package.json'));
 const { chromium } = frontRequire('playwright');
 const { NestFactory } = require('@nestjs/core');
 const { ValidationPipe } = require('@nestjs/common');
+const manual = process.argv.includes('--manual');
 
 async function main() {
   assert.equal(process.env.E2E_ISOLATED, 'true');
@@ -72,7 +73,7 @@ async function main() {
     await api('/vehiculos', 'POST', { clienteId: cliente.id, placa: '1234PWA', marca: 'Toyota', modelo: 'Offline', kilometraje: 1000 }, token);
     const pieza = await api('/repuestos', 'POST', { codigo: 'PWA-01', nombre: 'Pastillas offline', stock: 5, precioCompra: 60, precioVenta: 100 }, token);
     const launch = offline => chromium.launchPersistentContext(profile, {
-      executablePath: chrome, headless: true, offline, serviceWorkers: 'allow', viewport: { width: 1280, height: 900 },
+      executablePath: chrome, headless: !manual, offline, serviceWorkers: 'allow', viewport: { width: 1280, height: 900 },
     });
     browser = await launch(false);
     let page = browser.pages()[0];
@@ -145,6 +146,23 @@ async function main() {
     }
     await esperar(async () => (await leer(page, 'vehiculos')).length === 1, 'descarga inicial');
     console.log('OK: sesión, Service Worker y copia local descargados.');
+    if (manual) {
+      console.log('\nPWA LISTA PARA PROBAR A MANO: ' + origin);
+      console.log('Chrome ya está abierto y la sesión del taller de pruebas está iniciada.');
+      console.log('Correo de prueba: ' + process.env.SEED_ADMIN_EMAIL);
+      console.log('Contraseña de prueba: ' + process.env.SEED_ADMIN_PASSWORD);
+      console.log('F12 > Network > Offline. Registre una orden y compruebe pendientes.');
+      console.log('Recargue sin conexión; luego cambie a No throttling para sincronizar.');
+      console.log('Al terminar, cierre esta ventana de Chrome o presione Enter en esta terminal.');
+      console.log('Los datos son temporales y se eliminan al terminar esta prueba.\n');
+      await new Promise(resolve => {
+        const rl = require('node:readline').createInterface({ input: process.stdin, output: process.stdout });
+        const fin = () => { rl.close(); browser.removeListener('close', fin); resolve(); };
+        rl.once('line', fin);
+        browser.once('close', fin);
+      });
+      return;
+    }
     await browser.setOffline(true);
     await page.getByRole('link', { name: '+ Recibir vehículo', exact: true }).click();
     await page.getByRole('button').filter({ hasText: /Toyota\s+Offline/ }).click();

@@ -4,9 +4,11 @@ const { randomBytes } = require('node:crypto');
 const path = require('node:path');
 const nombre = `motoraapp-e2e-${process.pid}-${Date.now()}`;
 const password = randomBytes(24).toString('hex');
+// Credencial conocida solo para la prueba manual, aislada y publicada en loopback.
+const claveAdmin = process.argv.includes('--manual') ? 'PruebaPWA2026!' : password;
 const env = { ...process.env, NODE_ENV: 'test', DB_HOST: '127.0.0.1', DB_USER: 'motora_test',
   DB_PASSWORD: password, DB_NAME: 'motoraapp_e2e', DB_SYNC: 'false', JWT_SECRET: randomBytes(32).toString('hex'),
-  SEED_DEMO: 'true', SEED_ADMIN_EMAIL: 'admin@example.test', SEED_ADMIN_PASSWORD: password,
+  SEED_DEMO: 'true', SEED_ADMIN_EMAIL: 'admin@example.test', SEED_ADMIN_PASSWORD: claveAdmin,
   SEED_SUPERADMIN_EMAIL: 'superadmin@example.test', SEED_SUPERADMIN_PASSWORD: password,
   SEED_TALLER_NOMBRE: 'Taller de pruebas', E2E_ISOLATED: 'true' };
 function docker(args) {
@@ -30,12 +32,13 @@ async function main() {
     }
     if (!listo) throw new Error('PostgreSQL de pruebas no arrancó');
     const pwa = process.argv.includes('--pwa');
+    const manual = pwa && process.argv.includes('--manual');
     console.log(`PostgreSQL aislado listo. Ejecutando ${pwa ? 'prueba PWA en navegador' : 'migraciones y pruebas HTTP'}.`);
     const args = pwa
-      ? ['-r', 'ts-node/register/transpile-only', 'test/pwa-offline.cjs']
+      ? ['-r', 'ts-node/register/transpile-only', 'test/pwa-offline.cjs', ...(manual ? ['--manual'] : [])]
       : [require.resolve('jest/bin/jest'), '--config', './test/jest-e2e.json', '--runInBand'];
     const r = spawnSync(process.execPath, args,
-      { cwd: path.join(__dirname, '..'), env, stdio: 'inherit', timeout: pwa ? 420000 : 180000 });
+      { cwd: path.join(__dirname, '..'), env, stdio: 'inherit', timeout: manual ? 0 : pwa ? 420000 : 180000 });
     if (r.error) throw r.error;
     process.exitCode = r.status ?? 1;
   } finally {
